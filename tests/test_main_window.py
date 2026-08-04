@@ -292,6 +292,32 @@ def test_incoming_call_reject_hangs_up_and_resets_state(qtbot):
     assert window.incoming_popup is None
 
 
+def test_answering_incoming_call_shows_window_if_hidden(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.hide()
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+    window.incoming_popup.answered.emit()
+
+    assert window.isVisible()
+
+
+def test_declining_incoming_call_does_not_show_window_if_hidden(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.hide()
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+    window.incoming_popup.declined.emit()
+
+    assert not window.isVisible()
+
+
 def test_contacts_button_opens_dialog_and_fills_number_on_selection(qtbot, monkeypatch):
     from PySide6.QtCore import QObject, Signal
 

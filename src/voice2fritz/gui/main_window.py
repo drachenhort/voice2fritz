@@ -345,6 +345,7 @@ class MainWindow(QMainWindow):
         self.incoming_popup.show()
 
     def _on_incoming_call_answered(self) -> None:
+        self._show_and_raise()
         self._close_incoming_popup()
         self.sip_engine.answer(self._active_call)
         self.hangup_button.setEnabled(True)
