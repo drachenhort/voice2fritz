@@ -1,6 +1,6 @@
 [project]
 name = "voice2fritz"
-version = "0.2.0"
+version = "0.3.0"
 description = "SIP softphone for FRITZ!Box"
 requires-python = ">=3.11"
 dependencies = [

@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+- Contacts tab in the dock, alongside Call Log — click a contact to dial
+  without opening the Contacts dialog. The Contacts nav button still opens
+  the modal dialog too.
+
+### Changed
+- Non-dialpad controls regrouped for a more deliberate layout: Settings/
+  Contacts as a nav row at the top, Hangup/Mute as a row under the CALL
+  button (in place of a mixed vertical button column and a stray Mute
+  button on the Call Details dock).
+- Call Details and Call Log docks are now pinned in place — no drag,
+  float, or close.
+- Removed the Log button; the Call Log/Contacts dock is always visible.
+- Tighter spacing in the dialpad grid.
+
+### Fixed
+- SIP status LED now shows green on a successful registration. It was
+  stuck red because the registration status text pjsip reports back is a
+  bare "OK", not "200 OK" as the LED's check expected.
+
 ## [0.2.0]
 
 ### Added
