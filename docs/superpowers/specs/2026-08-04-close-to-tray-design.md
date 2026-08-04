@@ -38,9 +38,15 @@ first minimize.
 
 ### Incoming calls while hidden
 
-No change needed — `IncomingCallPopup` is already a separate top-level
-widget independent of `MainWindow`'s visibility, so it continues to show
-and ring while the main window is hidden in the tray.
+`IncomingCallPopup` is already a separate top-level widget independent of
+`MainWindow`'s visibility, so it continues to show and ring while the main
+window is hidden in the tray — no change needed there.
+
+On **Answer**, `MainWindow._on_incoming_call_answered` additionally shows
+and raises the main window (same show/raise/activate sequence as tray
+activation), so accepting a call while minimized brings the call UI (Call
+Details, Hangup/Mute) back into view. Declining does not show the window —
+only answering does.
 
 ## Out of scope
 
