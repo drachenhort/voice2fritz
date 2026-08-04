@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
         self.digit_letter_labels: dict[str, QLabel] = {}
         dialpad_grid = QGridLayout()
         dialpad_grid.setSpacing(0)
+        dialpad_grid.setContentsMargins(0, 0, 0, 0)
         dialpad_rows = [
             ["1", "2", "3"],
             ["4", "5", "6"],
@@ -65,7 +66,7 @@ class MainWindow(QMainWindow):
             for col, digit in enumerate(digits):
                 button = QPushButton(digit)
                 button.setObjectName("dialpadButton")
-                button.setMinimumSize(90, 36)
+                button.setMinimumSize(80, 36)
                 button.clicked.connect(lambda checked=False, d=digit: self._on_digit_clicked(d))
 
                 letters_label = QLabel(_T9_LETTERS[digit])
@@ -74,6 +75,7 @@ class MainWindow(QMainWindow):
 
                 cell = QVBoxLayout()
                 cell.setSpacing(0)
+                cell.setContentsMargins(0, 0, 0, 0)
                 cell.addWidget(button)
                 cell.addWidget(letters_label)
                 cell_widget = QWidget()
