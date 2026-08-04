@@ -6,6 +6,10 @@ from voice2fritz.config import (
     save_config,
     load_device_selection,
     save_device_selection,
+    load_fritzbox_username,
+    save_fritzbox_username,
+    get_fritzbox_password,
+    set_fritzbox_password,
     get_password,
     set_password,
 )
@@ -81,6 +85,49 @@ def test_save_config_preserves_existing_device_selection(tmp_path):
 
     assert load_config(path) == cfg
     assert load_device_selection(path) == ("Astro A50", "pulse")
+
+
+def test_save_and_load_fritzbox_username_round_trip(tmp_path):
+    path = tmp_path / "config.json"
+
+    save_fritzbox_username("fritzuser", path)
+
+    assert load_fritzbox_username(path) == "fritzuser"
+
+
+def test_load_fritzbox_username_missing_file_returns_none(tmp_path):
+    path = tmp_path / "does-not-exist.json"
+    assert load_fritzbox_username(path) is None
+
+
+def test_save_fritzbox_username_preserves_existing_account(tmp_path):
+    path = tmp_path / "config.json"
+    cfg = AccountConfig(host="fritz.box", username="user123")
+    save_config(cfg, path)
+
+    save_fritzbox_username("fritzuser", path)
+
+    assert load_config(path) == cfg
+    assert load_fritzbox_username(path) == "fritzuser"
+
+
+def test_set_and_get_fritzbox_password_uses_distinct_keyring_key(monkeypatch):
+    store: dict[tuple[str, str], str] = {}
+
+    def fake_set_password(service, username, password):
+        store[(service, username)] = password
+
+    def fake_get_password(service, username):
+        return store.get((service, username))
+
+    monkeypatch.setattr("voice2fritz.config.keyring.set_password", fake_set_password)
+    monkeypatch.setattr("voice2fritz.config.keyring.get_password", fake_get_password)
+
+    set_password("user123", "sip-secret")
+    set_fritzbox_password("user123", "fritzbox-secret")
+
+    assert get_password("user123") == "sip-secret"
+    assert get_fritzbox_password("user123") == "fritzbox-secret"
 
 
 def test_set_and_get_password_uses_keyring(monkeypatch):

@@ -58,6 +58,28 @@ def save_device_selection(
     _write_raw(data, path)
 
 
+FRITZBOX_KEYRING_PREFIX = "fritzbox:"
+
+
+def load_fritzbox_username(path: Path = DEFAULT_CONFIG_PATH) -> str | None:
+    data = _read_raw(path)
+    return data.get("fritzbox_username")
+
+
+def save_fritzbox_username(username: str, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    data = _read_raw(path)
+    data["fritzbox_username"] = username
+    _write_raw(data, path)
+
+
+def get_fritzbox_password(username: str) -> str | None:
+    return keyring.get_password(SERVICE_NAME, f"{FRITZBOX_KEYRING_PREFIX}{username}")
+
+
+def set_fritzbox_password(username: str, password: str) -> None:
+    keyring.set_password(SERVICE_NAME, f"{FRITZBOX_KEYRING_PREFIX}{username}", password)
+
+
 def get_password(username: str) -> str | None:
     return keyring.get_password(SERVICE_NAME, username)
 
