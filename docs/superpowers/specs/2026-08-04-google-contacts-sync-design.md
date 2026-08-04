@@ -7,10 +7,19 @@ Date: 2026-08-04
 Let the user pull contacts from their Android phone's Google account into
 voice2fritz's local phonebook, instead of typing them in by hand. One-way
 sync only (Google → local); contacts added locally are never pushed back
-to Google and are never touched by a sync. Google-sourced contacts ARE
-updated in place when their number(s) change on the Google side —
-tracked separately from manually-added contacts so update/replace logic
-can never affect anything the user typed in by hand.
+to Google. Google-sourced contacts are updated in place when their
+number(s) change on the Google side, tracked separately from
+manually-added contacts via a `source` marker.
+
+**Name-conflict priority is a Settings toggle.** When a synced Google
+contact and a manually-added local contact share the same name, one of
+two things happens, controlled by a new setting:
+- **Google wins (default):** the local entry is replaced by the synced
+  one. This can overwrite/delete a manually-added contact's number if it
+  shares a name with a Google contact — a real, intentional data-loss
+  tradeoff the user explicitly chose as the default.
+- **Local wins (opt-out):** sync skips creating/updating anything for
+  that name; the manually-added entry is left exactly as-is.
 
 Deferred from the local-phonebook work (see
 `2026-08-04-phonebook-design.md`, which itself replaced an earlier
@@ -60,26 +69,32 @@ dependencies" streak.
   key — `load_contacts()` defaults missing keys to `"local"`, so every
   contact added before this feature existed is (correctly) treated as
   manually-added and never touched by sync logic.
+- **Priority setting:** `config.py` gains
+  `load_google_sync_overwrites_local() -> bool` (default `True`, matching
+  the user's chosen default) and
+  `save_google_sync_overwrites_local(value: bool)`, stored in
+  `config.json` alongside the existing settings. `SettingsDialog` gets a
+  checkbox, "Google sync overwrites local contacts with the same name",
+  checked by default, saved on the same Save click as everything else.
 - **Merging, grouped by name:** Google contacts are grouped by name; each
   group's number list becomes that name's current Google-sourced numbers
   (multiple numbers per Google contact become multiple local `Contact`
   entries, one per number, matching how the earlier TR-064 design handled
-  multi-number contacts). For each name:
-  - Look up existing local entries where `source == "google"` and
-    `name` matches.
-  - If there are none yet, or their number set differs from the new
-    Google-reported set (a number was added, removed, or changed on the
-    phone), replace them: delete all existing `source == "google"`
-    entries for that name, then add fresh entries for every current
-    number.
-  - If the sets match exactly, do nothing (no-op, no unnecessary
-    writes).
-  - Entries with `source == "local"` (anything the user typed in
-    manually) are never inspected or modified by this process, even if
-    the name matches a Google contact's name exactly.
-  - This makes sync idempotent (no duplicates from repeated runs) and
-    correctly reflects number changes made on the phone, while
-    guaranteeing manually-added contacts are never altered.
+  multi-number contacts). For each name, read the priority setting, then:
+  - **If a `source == "local"` entry with this name exists:**
+    - Priority = local wins → skip this name entirely, nothing changes.
+    - Priority = Google wins → delete every existing entry (both
+      `"local"` and `"google"` sourced) with this name, then add fresh
+      `source == "google"` entries for every current number.
+  - **If no `source == "local"` entry with this name exists:** behave the
+    same regardless of the priority setting (there's no conflict to
+    resolve) — if existing `source == "google"` entries for this name
+    have a different number set than the fresh fetch, replace them;
+    if there are none yet, add them; if the sets already match, do
+    nothing.
+  - This makes sync idempotent for the common case (no duplicates from
+    repeated runs once no local/google mismatch remains for a name), and
+    correctly reflects number changes made on the phone.
 
 ## Components
 
@@ -87,14 +102,23 @@ dependencies" streak.
   - `Contact` gains `source: str = "local"`.
   - `load_contacts()` reads `item.get("source", "local")` so pre-existing
     entries without the key default correctly.
-  - New: `replace_google_contacts_for_name(name: str, numbers: list[str], path=DEFAULT_CONTACTS_PATH) -> None`
-    — removes every existing entry where `name` matches AND
-    `source == "google"`, then appends one new `Contact(name, number, source="google")`
-    per number in `numbers`. Entries with `source == "local"` sharing the
-    same name are left untouched. This is the one place that ever
-    deletes/replaces existing contacts; `add_contact()` (existing,
-    unchanged) is still used for plain manual additions from the dialog's
-    Add button.
+  - New: `sync_contact_for_name(name: str, numbers: list[str], overwrite_local: bool, path=DEFAULT_CONTACTS_PATH) -> bool`
+    — implements the priority logic described above in one place. Returns
+    `True` if it made a change (added/replaced anything), `False` if it
+    skipped (local-wins case) or the state already matched (no-op case)
+    — used by `sync_google_contacts()` to count real changes. This is the
+    one place that ever deletes/replaces existing contacts;
+    `add_contact()` (existing, unchanged) is still used for plain manual
+    additions from the dialog's Add button.
+- `src/voice2fritz/config.py` (modified): add
+  `load_google_sync_overwrites_local(path=DEFAULT_CONFIG_PATH) -> bool`
+  (default `True` when the key is absent) and
+  `save_google_sync_overwrites_local(value: bool, path=DEFAULT_CONFIG_PATH) -> None`,
+  merge-safe like the existing device-selection/FritzBox-username keys.
+- `src/voice2fritz/gui/settings_dialog.py` (modified): new
+  `google_priority_checkbox: QCheckBox` ("Google sync overwrites local
+  contacts with the same name"), defaulted to checked, saved via
+  `config.save_google_sync_overwrites_local(...)` on the same Save click.
 - `src/voice2fritz/google_contacts.py` (new):
   - `TOKEN_PATH = Path.home() / ".config" / "voice2fritz" / "google_token.json"`
   - `CLIENT_SECRET_PATH = Path.home() / ".config" / "voice2fritz" / "google_client_secret.json"`
@@ -106,12 +130,12 @@ dependencies" streak.
   - `_fetch_google_contacts(creds) -> dict[str, list[str]]` — returns
     `{name: [number, ...]}`, grouping every phone number under its
     contact's name, paginating through `people.connections.list`.
-  - `sync_google_contacts() -> int` — orchestrates the above: fetches the
-    grouped Google contacts, and for each name whose number set differs
-    from what's already stored under `source == "google"` for that name,
-    calls `contacts.replace_google_contacts_for_name(name, numbers)`.
-    Returns the count of names that were added or changed (not a raw
-    contact count — matches what the UI reports in one line, see below).
+  - `sync_google_contacts() -> int` — orchestrates the above: reads the
+    priority setting via `config.load_google_sync_overwrites_local()`,
+    fetches the grouped Google contacts, and calls
+    `contacts.sync_contact_for_name(name, numbers, overwrite_local)` for
+    each name, counting how many calls returned `True`. Returns that
+    count — matches what the UI reports in one line, see below.
 - `src/voice2fritz/gui/contacts_dialog.py` (modified): new
   `sync_button` ("Sync Google"). On click: calls
   `google_contacts.sync_google_contacts()` inside a try/except; on
@@ -132,10 +156,10 @@ dependencies" streak.
 ## Data Flow
 
 1. User opens Contacts, clicks "Sync Google".
-2. `sync_google_contacts()` runs: get/refresh credentials → fetch all
-   Google contacts grouped by name → for each name whose current
-   Google-sourced numbers differ from what's fetched, replace them via
-   `contacts.replace_google_contacts_for_name(name, numbers)`.
+2. `sync_google_contacts()` runs: get/refresh credentials → read the
+   priority setting → fetch all Google contacts grouped by name → call
+   `contacts.sync_contact_for_name(name, numbers, overwrite_local)` per
+   name, which adds, replaces, or skips per the priority rules above.
 3. Dialog reloads its list from `contacts.load_contacts()` (existing
    `_reload_list()` method, unchanged) — synced contacts appear alongside
    manually-added ones, distinguished internally by `source` but not
@@ -159,11 +183,14 @@ dependencies" streak.
 
 ## Testing
 
-- `contacts.replace_google_contacts_for_name`: unit-tested directly
-  (no Google/network involvement at all) — covers replacing an existing
-  google-sourced entry's numbers, adding a brand-new name with no prior
-  entries, and — critically — leaving a `source == "local"` entry with
-  the same name completely untouched.
+- `contacts.sync_contact_for_name`: unit-tested directly (no
+  Google/network involvement at all) — covers: replacing an existing
+  google-sourced entry's numbers; adding a brand-new name with no prior
+  entries; a local-name conflict with `overwrite_local=False` (must leave
+  the local entry completely untouched and report `False`); the same
+  conflict with `overwrite_local=True` (must delete the local entry and
+  replace it with the google-sourced one, reporting `True`); and the
+  already-in-sync no-op case (must report `False`, no writes).
 - `_fetch_google_contacts`'s pagination/grouping logic and the
   diff-and-replace orchestration in `sync_google_contacts` are the
   testable seams: both can be unit-tested by injecting a fake People API
