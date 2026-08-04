@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
@@ -12,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from voice2fritz import config
+from voice2fritz import call_log, config, contacts
 from voice2fritz.audio import input_devices, output_devices
 from voice2fritz.gui.contacts_dialog import ContactsDialog
 from voice2fritz.gui.settings_dialog import SettingsDialog
@@ -24,6 +26,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("voice2fritz")
         self.sip_engine = sip_engine
         self._active_call = None
+        self._call_direction: str | None = None
+        self._call_number: str | None = None
+        self._call_start_time: datetime | None = None
 
         self.number_edit = QLineEdit()
         self.number_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -152,7 +157,11 @@ class MainWindow(QMainWindow):
             button.style().polish(button)
 
     def _on_call_clicked(self) -> None:
-        self._active_call = self.sip_engine.make_call(self.number_edit.text())
+        number = self.number_edit.text()
+        self._active_call = self.sip_engine.make_call(number)
+        self._call_direction = "outgoing"
+        self._call_number = number
+        self._call_start_time = datetime.now()
         self.hangup_button.setEnabled(True)
         self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
@@ -172,9 +181,36 @@ class MainWindow(QMainWindow):
         self.mute_button.setEnabled(False)
         self.mute_button.setChecked(False)
         self._set_dtmf_mode(False)
+        self._log_completed_call()
+
+    def _log_completed_call(self) -> None:
+        if self._call_direction is None:
+            return
+        duration = 0
+        if self._call_direction != "missed" and self._call_start_time is not None:
+            duration = int((datetime.now() - self._call_start_time).total_seconds())
+        name = ""
+        for contact in contacts.load_contacts():
+            if contact.number == self._call_number:
+                name = contact.name
+                break
+        entry = call_log.CallLogEntry(
+            number=self._call_number or "",
+            name=name,
+            direction=self._call_direction,
+            timestamp=datetime.now().isoformat(),
+            duration_seconds=duration,
+        )
+        call_log.append_call_log_entry(entry)
+        self._call_direction = None
+        self._call_number = None
+        self._call_start_time = None
 
     def _on_incoming_call(self, call) -> None:
         self._active_call = call
+        self._call_direction = "incoming"
+        self._call_number = self.sip_engine.get_remote_number(call)
+        self._call_start_time = datetime.now()
         answer = QMessageBox.question(
             self,
             "Incoming call",
@@ -187,6 +223,7 @@ class MainWindow(QMainWindow):
             self.mute_button.setEnabled(True)
             self._set_dtmf_mode(True)
         else:
+            self._call_direction = "missed"
             self.sip_engine.hangup(self._active_call)
             self._on_call_ended()
 

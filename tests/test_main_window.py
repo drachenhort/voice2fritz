@@ -2,7 +2,9 @@ import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
+from voice2fritz import call_log as call_log_module
 from voice2fritz import config as config_module
+from voice2fritz import contacts as contacts_module
 from voice2fritz.audio import AudioDevice
 from voice2fritz.gui.main_window import MainWindow
 
@@ -11,6 +13,12 @@ from voice2fritz.gui.main_window import MainWindow
 def no_device_persistence(monkeypatch):
     monkeypatch.setattr(config_module, "load_device_selection", lambda path=config_module.DEFAULT_CONFIG_PATH: (None, None))
     monkeypatch.setattr(config_module, "save_device_selection", lambda capture, playback, path=config_module.DEFAULT_CONFIG_PATH: None)
+
+
+@pytest.fixture(autouse=True)
+def no_call_log_persistence(monkeypatch):
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: None)
+    monkeypatch.setattr(contacts_module, "load_contacts", lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [])
 
 
 class FakeSipEngine(QObject):
@@ -29,6 +37,7 @@ class FakeSipEngine(QObject):
         self.selected_capture = None
         self.selected_playback = None
         self.dtmf_sent = []
+        self.remote_number = "+4917600000000"
 
     def make_call(self, number):
         self.calls_made.append(number)
@@ -48,6 +57,9 @@ class FakeSipEngine(QObject):
 
     def send_dtmf(self, call, digit):
         self.dtmf_sent.append((call, digit))
+
+    def get_remote_number(self, call):
+        return self.remote_number
 
     def list_devices(self):
         return [
@@ -337,3 +349,77 @@ def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
     window._on_account_saved(cfg)
 
     assert engine.registrations == [("fritz.box", "user123", "secret")]
+
+
+def test_completed_outgoing_call_appends_log_entry(qtbot, monkeypatch):
+    logged = []
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("+4917612345678")
+    window.call_button.click()
+    window.hangup_button.click()
+
+    assert len(logged) == 1
+    assert logged[0].number == "+4917612345678"
+    assert logged[0].direction == "outgoing"
+    assert logged[0].duration_seconds >= 0
+
+
+def test_accepted_incoming_call_appends_log_entry(qtbot, monkeypatch):
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    logged = []
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+    window.hangup_button.click()
+
+    assert len(logged) == 1
+    assert logged[0].number == engine.remote_number
+    assert logged[0].direction == "incoming"
+
+
+def test_rejected_incoming_call_appends_missed_log_entry(qtbot, monkeypatch):
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+    logged = []
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+
+    assert len(logged) == 1
+    assert logged[0].number == engine.remote_number
+    assert logged[0].direction == "missed"
+    assert logged[0].duration_seconds == 0
+
+
+def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):
+    monkeypatch.setattr(
+        contacts_module,
+        "load_contacts",
+        lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [contacts_module.Contact(name="Anna Schmidt", number="+4917612345678")],
+    )
+    logged = []
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("+4917612345678")
+    window.call_button.click()
+    window.hangup_button.click()
+
+    assert logged[0].name == "Anna Schmidt"
