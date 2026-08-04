@@ -65,6 +65,7 @@ class MainWindow(QMainWindow):
             for col, digit in enumerate(digits):
                 button = QPushButton(digit)
                 button.setObjectName("dialpadButton")
+                button.setMinimumSize(80, 36)
                 button.clicked.connect(lambda checked=False, d=digit: self._on_digit_clicked(d))
 
                 letters_label = QLabel(_T9_LETTERS[digit])
