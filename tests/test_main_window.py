@@ -436,7 +436,38 @@ def test_incoming_call_auto_dismisses_popup_on_remote_hangup(qtbot, monkeypatch)
 
     assert window.incoming_popup is None
     assert stopped == [True]
+    assert len(logged) == 1
     assert logged[0].direction == "missed"
+
+
+def test_second_incoming_call_replaces_first_pending_popup(qtbot, monkeypatch):
+    stop_calls = []
+    play_calls = []
+    monkeypatch.setattr(ringtone, "stop_ringtone", lambda: stop_calls.append(True))
+    monkeypatch.setattr(ringtone, "play_ringtone", lambda: play_calls.append(True))
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    first_call = object()
+    engine.remote_number = "+4917600000000"
+    engine.incomingCall.emit(first_call)
+    first_popup = window.incoming_popup
+    assert first_popup is not None
+    assert play_calls == [True]
+
+    second_call = object()
+    engine.remote_number = "+4917699999999"
+    engine.incomingCall.emit(second_call)
+
+    assert window.incoming_popup is not None
+    assert window.incoming_popup is not first_popup
+    assert window._active_call is second_call
+    assert window._call_number == "+4917699999999"
+    # stop_ringtone for the first call must happen before the second play_ringtone
+    assert stop_calls == [True]
+    assert play_calls == [True, True]
 
 
 def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):

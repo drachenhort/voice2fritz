@@ -4,7 +4,7 @@ import wave
 from pathlib import Path
 
 from PySide6.QtCore import QUrl
-from PySide6.QtMultimedia import QSoundEffect
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 
 DEFAULT_RINGTONE_CACHE_PATH = Path.home() / ".cache" / "voice2fritz" / "ringtone.wav"
 
@@ -12,7 +12,9 @@ _THEME_PATHS = [
     Path("/usr/share/sounds/freedesktop/stereo/phone-incoming-call.oga"),
 ]
 
-_effect: QSoundEffect | None = None
+_player: QMediaPlayer | None = None
+_audio_output: QAudioOutput | None = None
+_fallback_attempted = False
 
 
 def _system_ringtone_path() -> Path | None:
@@ -49,25 +51,50 @@ def _synthesize_ringtone(path: Path | None = None) -> Path:
     return path
 
 
+def _on_error_occurred(*_args) -> None:
+    global _fallback_attempted
+    if _fallback_attempted:
+        return
+    _fallback_attempted = True
+    try:
+        fallback_path = _synthesize_ringtone()
+        _start_playback(fallback_path)
+    except Exception:
+        pass
+
+
+def _start_playback(source_path: Path) -> None:
+    global _player, _audio_output
+    player = QMediaPlayer()
+    audio_output = QAudioOutput()
+    player.setAudioOutput(audio_output)
+    player.errorOccurred.connect(_on_error_occurred)
+    player.setSource(QUrl.fromLocalFile(str(source_path)))
+    player.setLoops(QMediaPlayer.Loops.Infinite)
+    player.play()
+    _player = player
+    _audio_output = audio_output
+
+
 def play_ringtone() -> None:
-    global _effect
+    global _fallback_attempted
+    _fallback_attempted = False
     try:
         source_path = _system_ringtone_path() or _synthesize_ringtone()
-        effect = QSoundEffect()
-        effect.setSource(QUrl.fromLocalFile(str(source_path)))
-        effect.setLoopCount(QSoundEffect.Infinite)
-        effect.play()
-        _effect = effect
+        _start_playback(source_path)
     except Exception:
-        _effect = None
+        global _player, _audio_output
+        _player = None
+        _audio_output = None
 
 
 def stop_ringtone() -> None:
-    global _effect
+    global _player, _audio_output
     try:
-        if _effect is not None:
-            _effect.stop()
+        if _player is not None:
+            _player.stop()
     except Exception:
         pass
     finally:
-        _effect = None
+        _player = None
+        _audio_output = None

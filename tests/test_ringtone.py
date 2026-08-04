@@ -1,5 +1,7 @@
 import wave
 
+from PySide6.QtMultimedia import QMediaPlayer
+
 from voice2fritz import ringtone
 
 
@@ -56,4 +58,25 @@ def test_play_ringtone_never_raises_even_if_synthesis_fails(monkeypatch):
     monkeypatch.setattr(ringtone, "_THEME_PATHS", [])
 
     ringtone.play_ringtone()
+    ringtone.stop_ringtone()
+
+
+def test_play_ringtone_loads_synthesized_wav_source(qtbot, monkeypatch, tmp_path):
+    monkeypatch.setattr(ringtone, "DEFAULT_RINGTONE_CACHE_PATH", tmp_path / "ring.wav")
+    monkeypatch.setattr(ringtone, "_THEME_PATHS", [tmp_path / "missing.oga"])
+
+    ringtone.play_ringtone()
+
+    assert ringtone._player is not None
+    qtbot.waitUntil(
+        lambda: ringtone._player.mediaStatus()
+        in (
+            QMediaPlayer.MediaStatus.LoadedMedia,
+            QMediaPlayer.MediaStatus.BufferedMedia,
+        ),
+        timeout=2000,
+    )
+    assert ringtone._player.source().toLocalFile() != ""
+    assert ringtone._player.source().toLocalFile().endswith("ring.wav")
+
     ringtone.stop_ringtone()

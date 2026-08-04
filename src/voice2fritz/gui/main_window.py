@@ -274,6 +274,8 @@ class MainWindow(QMainWindow):
         self._call_start_time = None
 
     def _on_incoming_call(self, call) -> None:
+        if self.incoming_popup is not None:
+            self._close_incoming_popup()
         self._active_call = call
         self._call_direction = "incoming"
         self._call_number = self.sip_engine.get_remote_number(call)
@@ -302,9 +304,12 @@ class MainWindow(QMainWindow):
 
     def _close_incoming_popup(self) -> None:
         ringtone.stop_ringtone()
-        if self.incoming_popup is not None:
-            self.incoming_popup.close()
-            self.incoming_popup = None
+        popup = self.incoming_popup
+        self.incoming_popup = None
+        if popup is not None:
+            popup.close()
+            popup.setParent(self)
+            popup.deleteLater()
 
     def _on_settings_clicked(self) -> None:
         dialog = SettingsDialog(self)
