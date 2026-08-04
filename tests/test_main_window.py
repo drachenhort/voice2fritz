@@ -116,7 +116,7 @@ def test_mute_button_toggles_engine_mute(qtbot):
     window.number_edit.setText("01234567")
     window.call_button.click()
     active_call = window._active_call
-    window.call_details.mute_button.click()
+    window.mute_button.click()
 
     assert engine.mutes == [(active_call, True)]
 
@@ -264,7 +264,7 @@ def test_incoming_call_accept_answers_and_enables_controls(qtbot):
     assert engine.answers == [incoming_call]
     assert window._active_call is incoming_call
     assert window.hangup_button.isEnabled()
-    assert window.call_details.mute_button.isEnabled()
+    assert window.mute_button.isEnabled()
     assert window.call_details.name_label.text() == engine.remote_number
     assert window.incoming_popup is None
 
@@ -281,7 +281,7 @@ def test_incoming_call_reject_hangs_up_and_resets_state(qtbot):
     assert engine.declines == [incoming_call]
     assert window._active_call is None
     assert not window.hangup_button.isEnabled()
-    assert not window.call_details.mute_button.isEnabled()
+    assert not window.mute_button.isEnabled()
     assert window.incoming_popup is None
 
 

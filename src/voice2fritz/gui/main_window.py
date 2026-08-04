@@ -83,28 +83,38 @@ class MainWindow(QMainWindow):
         self.call_button.setObjectName("callButton")
         self.call_button.setToolTip("Call")
 
+        self.hangup_button = QPushButton("✕ Hangup")
+        self.hangup_button.setObjectName("navButton")
+        self.hangup_button.setToolTip("Hang up")
+        self.hangup_button.setEnabled(False)
+        self.mute_button = QPushButton("🔇 Mute")
+        self.mute_button.setObjectName("navButton")
+        self.mute_button.setToolTip("Mute")
+        self.mute_button.setCheckable(True)
+        self.mute_button.setEnabled(False)
+
+        call_control_row = QHBoxLayout()
+        call_control_row.addWidget(self.hangup_button)
+        call_control_row.addWidget(self.mute_button)
+
         dialpad_column = QVBoxLayout()
         dialpad_column.addLayout(number_row)
         dialpad_column.addLayout(dialpad_grid)
         dialpad_column.addWidget(self.call_button)
+        dialpad_column.addLayout(call_control_row)
 
-        self.hangup_button = QPushButton("✕")
-        self.hangup_button.setToolTip("Hang up")
-        self.hangup_button.setEnabled(False)
-        self.settings_button = QPushButton("⚙")
+        self.settings_button = QPushButton("⚙ Settings")
+        self.settings_button.setObjectName("navButton")
         self.settings_button.setToolTip("Settings")
         self.contacts_button = QPushButton("Contacts")
+        self.contacts_button.setObjectName("navButton")
         self.log_button = QPushButton("Log")
+        self.log_button.setObjectName("navButton")
 
-        controls_column = QVBoxLayout()
-        controls_column.addWidget(self.hangup_button)
-        controls_column.addWidget(self.settings_button)
-        controls_column.addWidget(self.contacts_button)
-        controls_column.addWidget(self.log_button)
-
-        top_row = QHBoxLayout()
-        top_row.addLayout(dialpad_column)
-        top_row.addLayout(controls_column)
+        nav_row = QHBoxLayout()
+        nav_row.addWidget(self.settings_button)
+        nav_row.addWidget(self.contacts_button)
+        nav_row.addWidget(self.log_button)
 
         self.sip_status_led = QLabel()
         self.sip_status_led.setFixedSize(14, 14)
@@ -116,7 +126,8 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         layout.addLayout(status_row)
-        layout.addLayout(top_row)
+        layout.addLayout(nav_row)
+        layout.addLayout(dialpad_column)
 
         container = QWidget()
         container.setLayout(layout)
@@ -144,7 +155,7 @@ class MainWindow(QMainWindow):
         self.call_button.clicked.connect(self._on_call_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
         self.backspace_button.clicked.connect(self._on_backspace_clicked)
-        self.call_details.mute_button.clicked.connect(self._on_mute_clicked)
+        self.mute_button.clicked.connect(self._on_mute_clicked)
         self.sip_engine.registrationStateChanged.connect(self._on_registration_state_changed)
         self.sip_engine.callStateChanged.connect(self._on_call_state_changed)
         self.sip_engine.callEnded.connect(self._on_call_ended)
@@ -199,6 +210,7 @@ class MainWindow(QMainWindow):
         self._call_number = number
         self._call_start_time = datetime.now()
         self.hangup_button.setEnabled(True)
+        self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
 
         name = self._contact_name_for(number)
@@ -211,7 +223,7 @@ class MainWindow(QMainWindow):
 
     def _on_mute_clicked(self) -> None:
         if self._active_call is not None:
-            self.sip_engine.set_mute(self._active_call, self.call_details.mute_button.isChecked())
+            self.sip_engine.set_mute(self._active_call, self.mute_button.isChecked())
 
     def _on_call_ended(self) -> None:
         if self.incoming_popup is not None:
@@ -220,6 +232,8 @@ class MainWindow(QMainWindow):
                 self._call_direction = "missed"
         self._active_call = None
         self.hangup_button.setEnabled(False)
+        self.mute_button.setEnabled(False)
+        self.mute_button.setChecked(False)
         self._set_dtmf_mode(False)
         self.call_details.set_idle()
         self._log_completed_call()
@@ -263,6 +277,7 @@ class MainWindow(QMainWindow):
         self._close_incoming_popup()
         self.sip_engine.answer(self._active_call)
         self.hangup_button.setEnabled(True)
+        self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
         name = self._contact_name_for(self._call_number)
         self.call_details.set_active_call(name, self._call_number or "")
