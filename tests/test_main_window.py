@@ -106,6 +106,29 @@ def test_mute_button_toggles_engine_mute(qtbot):
     assert engine.mutes == [(active_call, True)]
 
 
+def test_dialpad_button_appends_digit_to_number_field(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.digit_buttons["1"].click()
+    window.digit_buttons["2"].click()
+    window.digit_buttons["*"].click()
+
+    assert window.number_edit.text() == "12*"
+
+
+def test_dialpad_button_appends_to_existing_text(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("030")
+    window.digit_buttons["5"].click()
+
+    assert window.number_edit.text() == "0305"
+
+
 def test_registration_state_updates_status_label(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)

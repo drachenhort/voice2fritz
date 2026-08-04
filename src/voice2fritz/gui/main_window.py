@@ -1,5 +1,7 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -23,23 +25,53 @@ class MainWindow(QMainWindow):
         self._active_call = None
 
         self.number_edit = QLineEdit()
-        self.call_button = QPushButton("Call")
-        self.hangup_button = QPushButton("Hang up")
+        self.number_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self.digit_buttons: dict[str, QPushButton] = {}
+        dialpad_grid = QGridLayout()
+        dialpad_rows = [
+            ["1", "2", "3"],
+            ["4", "5", "6"],
+            ["7", "8", "9"],
+            ["*", "0", "#"],
+        ]
+        for row, digits in enumerate(dialpad_rows):
+            for col, digit in enumerate(digits):
+                button = QPushButton(digit)
+                button.clicked.connect(lambda checked=False, d=digit: self._on_digit_clicked(d))
+                dialpad_grid.addWidget(button, row, col)
+                self.digit_buttons[digit] = button
+
+        dialpad_column = QVBoxLayout()
+        dialpad_column.addWidget(self.number_edit)
+        dialpad_column.addLayout(dialpad_grid)
+
+        self.call_button = QPushButton("📞")
+        self.call_button.setObjectName("callButton")
+        self.call_button.setToolTip("Call")
+        self.hangup_button = QPushButton("✕")
+        self.hangup_button.setToolTip("Hang up")
         self.hangup_button.setEnabled(False)
-        self.mute_button = QPushButton("Mute")
+        self.mute_button = QPushButton("🔇")
+        self.mute_button.setToolTip("Mute")
         self.mute_button.setCheckable(True)
         self.mute_button.setEnabled(False)
+        self.settings_button = QPushButton("⚙")
+        self.settings_button.setToolTip("Settings")
+
+        controls_column = QVBoxLayout()
+        controls_column.addWidget(self.call_button)
+        controls_column.addWidget(self.hangup_button)
+        controls_column.addWidget(self.mute_button)
+        controls_column.addWidget(self.settings_button)
+
+        top_row = QHBoxLayout()
+        top_row.addLayout(dialpad_column)
+        top_row.addLayout(controls_column)
+
         self.capture_combo = QComboBox()
         self.playback_combo = QComboBox()
         self.status_label = QLabel("Not registered")
-        self.settings_button = QPushButton("Settings")
-
-        call_row = QHBoxLayout()
-        call_row.addWidget(self.number_edit)
-        call_row.addWidget(self.call_button)
-        call_row.addWidget(self.hangup_button)
-        call_row.addWidget(self.mute_button)
-        call_row.addWidget(self.settings_button)
 
         device_row = QHBoxLayout()
         device_row.addWidget(QLabel("Mic:"))
@@ -48,9 +80,9 @@ class MainWindow(QMainWindow):
         device_row.addWidget(self.playback_combo)
 
         layout = QVBoxLayout()
-        layout.addLayout(call_row)
-        layout.addLayout(device_row)
         layout.addWidget(self.status_label)
+        layout.addLayout(top_row)
+        layout.addLayout(device_row)
 
         container = QWidget()
         container.setLayout(layout)
@@ -95,6 +127,9 @@ class MainWindow(QMainWindow):
         self.sip_engine.callEnded.connect(self._on_call_ended)
         self.sip_engine.incomingCall.connect(self._on_incoming_call)
         self.settings_button.clicked.connect(self._on_settings_clicked)
+
+    def _on_digit_clicked(self, digit: str) -> None:
+        self.number_edit.setText(self.number_edit.text() + digit)
 
     def _on_call_clicked(self) -> None:
         self._active_call = self.sip_engine.make_call(self.number_edit.text())
