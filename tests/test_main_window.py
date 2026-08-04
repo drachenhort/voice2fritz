@@ -85,18 +85,6 @@ class FakeSipEngine(QObject):
         self.selected_playback = device_id
 
 
-def test_device_combos_populated_from_engine(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    assert [window.capture_combo.itemText(i) for i in range(window.capture_combo.count())] == [
-        "Built-in Mic",
-        "Headset",
-    ]
-    assert [window.call_details.speaker_combo.itemText(i) for i in range(window.call_details.speaker_combo.count())] == ["Headset"]
-
-
 def test_call_button_calls_engine_make_call_with_entered_number(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
@@ -231,33 +219,26 @@ def test_digit_buttons_get_dtmf_mode_property_during_active_call(qtbot):
     assert window.digit_buttons["1"].property("dtmfMode") is False
 
 
-def test_registration_state_updates_status_label(qtbot):
+def test_registration_success_shows_green_led(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
     engine.registrationStateChanged.emit("200 OK")
 
-    assert window.sip_status_label.text() == "SIP Status: 200 OK"
+    assert "#2fa84f" in window.sip_status_led.styleSheet()
+    assert window.sip_status_led.toolTip() == "200 OK"
 
 
-def test_device_combo_selection_calls_engine(qtbot):
+def test_registration_failure_shows_red_led(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
-    window.capture_combo.setCurrentIndex(1)
+    engine.registrationStateChanged.emit("401 Unauthorized")
 
-    assert engine.selected_capture == 1
-
-
-def test_initial_device_selection_applied_at_startup(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    assert engine.selected_capture == window.capture_combo.itemData(0)
-    assert engine.selected_playback == window.call_details.speaker_combo.itemData(0)
+    assert "#a83b2f" in window.sip_status_led.styleSheet()
+    assert window.sip_status_led.toolTip() == "401 Unauthorized"
 
 
 def test_incoming_call_accept_answers_and_enables_controls(qtbot):
@@ -293,37 +274,6 @@ def test_incoming_call_reject_hangs_up_and_resets_state(qtbot):
     assert not window.hangup_button.isEnabled()
     assert not window.call_details.mute_button.isEnabled()
     assert window.incoming_popup is None
-
-
-def test_restores_saved_device_selection_on_startup(qtbot, monkeypatch):
-    monkeypatch.setattr(config_module, "load_device_selection", lambda path=config_module.DEFAULT_CONFIG_PATH: ("Headset", "Headset"))
-
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    assert window.capture_combo.currentText() == "Headset"
-    assert window.call_details.speaker_combo.currentText() == "Headset"
-    assert engine.selected_capture == 1
-    assert engine.selected_playback == 1
-
-
-def test_device_selection_change_persists_choice(qtbot, monkeypatch):
-    saved = []
-    monkeypatch.setattr(
-        config_module,
-        "save_device_selection",
-        lambda capture, playback, path=config_module.DEFAULT_CONFIG_PATH: saved.append((capture, playback)),
-    )
-
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-    saved.clear()
-
-    window.capture_combo.setCurrentIndex(1)
-
-    assert saved == [("Headset", "Headset")]
 
 
 def test_contacts_button_opens_dialog_and_fills_number_on_selection(qtbot, monkeypatch):
@@ -365,7 +315,6 @@ def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
     window._on_account_saved(cfg)
 
     assert engine.registrations == [("fritz.box", "user123", "secret")]
-    assert window.account_label.text() == "Account: fritz.box"
 
 
 def test_completed_outgoing_call_appends_log_entry(qtbot, monkeypatch):
@@ -549,16 +498,6 @@ def test_backspace_button_removes_last_character(qtbot):
     window.backspace_button.click()
 
     assert window.number_edit.text() == "012"
-
-
-def test_set_account_host_updates_account_label(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    window.set_account_host("fritz.box")
-
-    assert window.account_label.text() == "Account: fritz.box"
 
 
 def test_outgoing_call_updates_call_details_panel(qtbot):

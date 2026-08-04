@@ -47,6 +47,11 @@ QPushButton[dtmfMode="true"] {
     border: 2px solid #4a9eff;
 }
 
+QPushButton#dialpadButton {
+    font-weight: bold;
+    font-size: 22px;
+}
+
 QPushButton#addButton {
     background-color: #2fa84f;
     color: #ffffff;

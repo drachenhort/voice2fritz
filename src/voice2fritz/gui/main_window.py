@@ -2,7 +2,6 @@ from datetime import datetime
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QComboBox,
     QDockWidget,
     QGridLayout,
     QHBoxLayout,
@@ -15,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from voice2fritz import call_log, config, contacts, ringtone
-from voice2fritz.audio import input_devices, output_devices
+from voice2fritz.audio import restore_saved_devices
 from voice2fritz.gui.call_details_panel import CallDetailsPanel
 from voice2fritz.gui.call_log_panel import CallLogPanel
 from voice2fritz.gui.contacts_dialog import ContactsDialog
@@ -62,11 +61,12 @@ class MainWindow(QMainWindow):
         for row, digits in enumerate(dialpad_rows):
             for col, digit in enumerate(digits):
                 button = QPushButton(digit)
+                button.setObjectName("dialpadButton")
                 button.clicked.connect(lambda checked=False, d=digit: self._on_digit_clicked(d))
 
                 letters_label = QLabel(_T9_LETTERS[digit])
                 letters_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                letters_label.setStyleSheet("color: #8a8f98; font-size: 9px;")
+                letters_label.setStyleSheet("color: #8a8f98; font-size: 11px;")
 
                 cell = QVBoxLayout()
                 cell.setSpacing(0)
@@ -106,20 +106,17 @@ class MainWindow(QMainWindow):
         top_row.addLayout(dialpad_column)
         top_row.addLayout(controls_column)
 
-        self.capture_combo = QComboBox()
+        self.sip_status_led = QLabel()
+        self.sip_status_led.setFixedSize(14, 14)
+        self._set_sip_status_led(is_ok=False, text="Not registered")
 
-        device_row = QHBoxLayout()
-        device_row.addWidget(QLabel("Mic:"))
-        device_row.addWidget(self.capture_combo)
-
-        self.sip_status_label = QLabel("SIP Status: Not registered")
-        self.account_label = QLabel("Account: —")
+        status_row = QHBoxLayout()
+        status_row.addWidget(self.sip_status_led)
+        status_row.addStretch()
 
         layout = QVBoxLayout()
-        layout.addWidget(self.sip_status_label)
-        layout.addWidget(self.account_label)
+        layout.addLayout(status_row)
         layout.addLayout(top_row)
-        layout.addLayout(device_row)
 
         container = QWidget()
         container.setLayout(layout)
@@ -140,41 +137,14 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.log_dock)
         self.log_panel.entryActivated.connect(self.number_edit.setText)
 
-        self._populate_devices()
         self._connect_signals()
-        self._restore_device_selection()
-
-    def _populate_devices(self) -> None:
-        devices = self.sip_engine.list_devices()
-        for device in input_devices(devices):
-            self.capture_combo.addItem(device.name, device.id)
-        for device in output_devices(devices):
-            self.call_details.speaker_combo.addItem(device.name, device.id)
-
-    def _restore_device_selection(self) -> None:
-        capture_name, playback_name = config.load_device_selection()
-
-        if capture_name is not None:
-            index = self.capture_combo.findText(capture_name)
-            if index >= 0:
-                self.capture_combo.setCurrentIndex(index)
-        if self.capture_combo.count() > 0:
-            self._on_capture_changed(self.capture_combo.currentIndex())
-
-        if playback_name is not None:
-            index = self.call_details.speaker_combo.findText(playback_name)
-            if index >= 0:
-                self.call_details.speaker_combo.setCurrentIndex(index)
-        if self.call_details.speaker_combo.count() > 0:
-            self._on_playback_changed(self.call_details.speaker_combo.currentIndex())
+        restore_saved_devices(self.sip_engine)
 
     def _connect_signals(self) -> None:
         self.call_button.clicked.connect(self._on_call_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
         self.backspace_button.clicked.connect(self._on_backspace_clicked)
         self.call_details.mute_button.clicked.connect(self._on_mute_clicked)
-        self.capture_combo.currentIndexChanged.connect(self._on_capture_changed)
-        self.call_details.speaker_combo.currentIndexChanged.connect(self._on_playback_changed)
         self.sip_engine.registrationStateChanged.connect(self._on_registration_state_changed)
         self.sip_engine.callStateChanged.connect(self._on_call_state_changed)
         self.sip_engine.callEnded.connect(self._on_call_ended)
@@ -199,15 +169,16 @@ class MainWindow(QMainWindow):
     def _on_backspace_clicked(self) -> None:
         self.number_edit.setText(self.number_edit.text()[:-1])
 
+    def _set_sip_status_led(self, is_ok: bool, text: str) -> None:
+        color = "#2fa84f" if is_ok else "#a83b2f"
+        self.sip_status_led.setStyleSheet(f"background-color: {color}; border-radius: 7px;")
+        self.sip_status_led.setToolTip(text)
+
     def _on_registration_state_changed(self, text: str) -> None:
-        self.sip_status_label.setText(f"SIP Status: {text}")
+        self._set_sip_status_led(is_ok=(text == "200 OK"), text=text)
 
     def _on_call_state_changed(self, text: str) -> None:
-        self.sip_status_label.setText(f"SIP Status: {text}")
         self.call_details.set_state_text(text)
-
-    def set_account_host(self, host: str) -> None:
-        self.account_label.setText(f"Account: {host}")
 
     def _set_dtmf_mode(self, enabled: bool) -> None:
         for button in self.digit_buttons.values():
@@ -312,7 +283,7 @@ class MainWindow(QMainWindow):
             popup.deleteLater()
 
     def _on_settings_clicked(self) -> None:
-        dialog = SettingsDialog(self)
+        dialog = SettingsDialog(self.sip_engine, self)
         dialog.accountSaved.connect(self._on_account_saved)
         dialog.exec()
 
@@ -327,19 +298,3 @@ class MainWindow(QMainWindow):
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:
         password = config.get_password(cfg.username) or ""
         self.sip_engine.register(cfg.host, cfg.username, password)
-        self.set_account_host(cfg.host)
-
-    def _on_capture_changed(self, index: int) -> None:
-        if index >= 0:
-            self.sip_engine.select_capture_device(self.capture_combo.itemData(index))
-            self._save_device_selection()
-
-    def _on_playback_changed(self, index: int) -> None:
-        if index >= 0:
-            self.sip_engine.select_playback_device(self.call_details.speaker_combo.itemData(index))
-            self._save_device_selection()
-
-    def _save_device_selection(self) -> None:
-        capture_name = self.capture_combo.currentText() or None
-        playback_name = self.call_details.speaker_combo.currentText() or None
-        config.save_device_selection(capture_name, playback_name)

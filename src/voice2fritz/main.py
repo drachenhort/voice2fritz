@@ -23,14 +23,13 @@ def main() -> None:
 
     account = config.load_config()
     if account is None:
-        dialog = SettingsDialog()
+        dialog = SettingsDialog(sip_engine)
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
             sip_engine.stop()
             sys.exit(0)
         account = config.load_config()
 
     window = MainWindow(sip_engine)
-    window.set_account_host(account.host)
     window.show()
 
     password = config.get_password(account.username) or ""
