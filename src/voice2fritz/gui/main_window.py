@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         self.digit_buttons: dict[str, QPushButton] = {}
         self.digit_letter_labels: dict[str, QLabel] = {}
         dialpad_grid = QGridLayout()
-        dialpad_grid.setHorizontalSpacing(1)
+        dialpad_grid.setHorizontalSpacing(2)
         dialpad_grid.setVerticalSpacing(0)
         dialpad_grid.setContentsMargins(0, 0, 0, 0)
         dialpad_rows = [
