@@ -12,8 +12,8 @@ open a popup.
 
 Out of scope: docking Contacts or Settings (stays as regular dialogs —
 this is Call Log only, per explicit user scoping). No change to the
-underlying `call_log.py` data model or `MainWindow`'s call-logging
-bookkeeping (already shipped) — this is a UI-container change only.
+underlying `call_log.py` data model — this is a UI-container change,
+plus one live-refresh fix described below.
 
 ## Architecture
 
@@ -32,6 +32,16 @@ fill the dial field on double-click, but the dock itself does not close
 or hide as a side effect of that — the prior dialog's "select closes the
 window" behavior doesn't make sense for a persistent panel, and removing
 it is a **deliberate behavior change**, not an oversight.
+
+**Live refresh (new in this pass, not just a container change):** the
+user reported that the previous modal `CallLogDialog` never updated
+while open — a call completing while the dialog was on screen required
+closing and reopening it to see the new entry, because the dialog only
+loaded entries once, at construction. This matters far more once the
+panel is permanently visible rather than reconstructed fresh on each
+open, so it's fixed as part of this pass: `MainWindow`'s existing
+`_log_completed_call` method calls `self.log_panel._reload_list()`
+after appending the new entry.
 
 ## Components
 
@@ -66,35 +76,25 @@ it is a **deliberate behavior change**, not an oversight.
     ```
     (no more `CallLogDialog(self)` construction/`exec()` — the panel
     already exists as part of the window, this just shows/hides it.)
-    `log_panel.py`'s `_reload_list()` is called once at construction
-    time (already the case, unchanged) and again by `_on_clear_clicked`
-    — there's no need to reload on dock show/hide, since
-    `_log_completed_call` doesn't currently push updates to an open
-    panel. **Known limitation carried forward, not introduced by this
-    change:** if a call completes while the dock is visible, the panel
-    won't show the new entry until next reload (dock toggled off/on, or
-    app restarted) — out of scope for this pass; `main_window.py` would
-    need to call `self.log_panel._reload_list()` from
-    `_log_completed_call` to fix this, which is a reasonable small
-    follow-up but not part of "dock it," which is purely a container
-    change.
+  - `_log_completed_call` (existing method, already logging completed
+    calls) gets one new line at the end: `self.log_panel._reload_list()`
+    — the live-refresh fix described above.
 
 ## Data Flow
 
-Unchanged from the shipped call-log feature — `MainWindow` still logs
-completed calls via `call_log.append_call_log_entry` in
-`_log_completed_call`. The only change is where the *viewer* for that
-log lives: previously a modal dialog constructed fresh (and thus
-re-reading the log file) every time Log was clicked; now a
-long-lived panel constructed once at startup, shown/hidden by the Log
-button, that only re-reads the log file on Clear or app restart (see
-the known limitation above).
+`MainWindow` still logs completed calls via
+`call_log.append_call_log_entry` in `_log_completed_call`, same as
+before. What changes: (1) where the *viewer* for that log lives —
+previously a modal dialog constructed fresh every time Log was clicked;
+now a long-lived panel constructed once at startup, shown/hidden by the
+Log button; and (2) the panel now refreshes immediately after each
+logged call, addressing the "had to reopen to see it" report.
 
 ## Error Handling
 
-No new failure modes — this is a container refactor, not new I/O or
-network logic. Existing error handling in `call_log.py` (malformed/
-missing file → empty list) is untouched.
+No new failure modes — this is a container refactor plus one added
+reload call, not new I/O or network logic. Existing error handling in
+`call_log.py` (malformed/missing file → empty list) is untouched.
 
 ## Testing
 
@@ -107,4 +107,10 @@ missing file → empty list) is untouched.
   `log_button` twice should show then hide `log_dock` (assert
   `log_dock.isVisible()` toggles), and `log_panel.entryActivated`
   should still fill `number_edit` — replaces the old
-  "opens dialog, dialog's signal fills the field" test.
+  "opens dialog, dialog's signal fills the field" test. New test:
+  completing a call (existing `FakeSipEngine` outgoing/incoming-call
+  test pattern) causes `log_panel.entry_list.count()` to reflect the
+  newly logged entry without any manual reload — verifies the live-
+  refresh fix, not just that `append_call_log_entry` was called (which
+  the existing Task 2 tests from the original call-log plan already
+  cover).
