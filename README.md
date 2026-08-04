@@ -7,6 +7,8 @@ make and receive calls over a headset. Built specifically for FRITZ!Box —
 no generic multi-provider SIP configuration, just host, username, and
 password.
 
+![voice2fritz screenshot](docs/images/screenshot.png)
+
 Tested against a FRITZ!Box 7590.
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes. Licensed under the
