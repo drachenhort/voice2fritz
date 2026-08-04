@@ -28,6 +28,13 @@ def no_call_log_persistence(monkeypatch):
     monkeypatch.setattr(contacts_module, "load_contacts", lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [])
 
 
+@pytest.fixture(autouse=True)
+def default_close_dialog_choice(monkeypatch):
+    # qtbot.addWidget(window) calls window.close() at teardown, which would
+    # otherwise block on a real QMessageBox.exec() headlessly.
+    monkeypatch.setattr(MainWindow, "_show_close_dialog", lambda self: "quit")
+
+
 class FakeSipEngine(QObject):
     registrationStateChanged = Signal(str)
     incomingCall = Signal(object)
@@ -480,6 +487,52 @@ def test_log_dock_holds_a_tab_widget_with_log_and_contacts(qtbot):
     assert window.log_dock.widget() is window.log_tabs
     assert window.log_tabs.indexOf(window.log_panel) >= 0
     assert window.log_tabs.indexOf(window.contacts_panel) >= 0
+
+
+def test_close_event_quit_accepts_the_close(qtbot, monkeypatch):
+    from PySide6.QtGui import QCloseEvent
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    monkeypatch.setattr(window, "_show_close_dialog", lambda: "quit")
+
+    event = QCloseEvent()
+    window.closeEvent(event)
+
+    assert event.isAccepted()
+
+
+def test_close_event_tray_ignores_close_and_hides_window(qtbot, monkeypatch):
+    from PySide6.QtGui import QCloseEvent
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.show()
+    monkeypatch.setattr(window, "_show_close_dialog", lambda: "tray")
+
+    event = QCloseEvent()
+    window.closeEvent(event)
+
+    assert not event.isAccepted()
+    assert not window.isVisible()
+
+
+def test_close_event_cancel_ignores_close_and_keeps_window_visible(qtbot, monkeypatch):
+    from PySide6.QtGui import QCloseEvent
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.show()
+    monkeypatch.setattr(window, "_show_close_dialog", lambda: "cancel")
+
+    event = QCloseEvent()
+    window.closeEvent(event)
+
+    assert not event.isAccepted()
+    assert window.isVisible()
 
 
 def test_log_panel_entry_activated_fills_number_field(qtbot):

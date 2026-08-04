@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QTabWidget,
@@ -184,6 +185,32 @@ class MainWindow(QMainWindow):
             self._on_digit_clicked(text)
         else:
             super().keyPressEvent(event)
+
+    def _show_close_dialog(self) -> str:
+        box = QMessageBox(self)
+        box.setWindowTitle("Close voice2fritz?")
+        box.setText("Quit voice2fritz, or keep it running in the tray?")
+        quit_button = box.addButton("Quit", QMessageBox.ButtonRole.AcceptRole)
+        tray_button = box.addButton("Minimize to Tray", QMessageBox.ButtonRole.ActionRole)
+        box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(tray_button)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is quit_button:
+            return "quit"
+        if clicked is tray_button:
+            return "tray"
+        return "cancel"
+
+    def closeEvent(self, event) -> None:
+        choice = self._show_close_dialog()
+        if choice == "quit":
+            event.accept()
+        elif choice == "tray":
+            event.ignore()
+            self.hide()
+        else:
+            event.ignore()
 
     def _on_digit_clicked(self, digit: str) -> None:
         if self._active_call is not None:
