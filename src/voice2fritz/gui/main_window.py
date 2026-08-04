@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         number_row.addWidget(self.backspace_button)
 
         self.digit_buttons: dict[str, QPushButton] = {}
+        self.digit_letter_labels: dict[str, QLabel] = {}
         dialpad_grid = QGridLayout()
         dialpad_rows = [
             ["1", "2", "3"],
@@ -75,6 +76,7 @@ class MainWindow(QMainWindow):
 
                 dialpad_grid.addWidget(cell_widget, row, col)
                 self.digit_buttons[digit] = button
+                self.digit_letter_labels[digit] = letters_label
 
         self.call_button = QPushButton("📞 CALL")
         self.call_button.setObjectName("callButton")
@@ -125,6 +127,10 @@ class MainWindow(QMainWindow):
         self.call_details = CallDetailsPanel()
         self.call_details_dock = QDockWidget("Call Details", self)
         self.call_details_dock.setWidget(self.call_details)
+        self.call_details_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable
+            | QDockWidget.DockWidgetFeature.DockWidgetFloatable
+        )
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.call_details_dock)
 
         self.log_panel = CallLogPanel()
@@ -208,6 +214,12 @@ class MainWindow(QMainWindow):
             button.style().unpolish(button)
             button.style().polish(button)
 
+    def _contact_name_for(self, number: str | None) -> str:
+        for contact in contacts.load_contacts():
+            if contact.number == number:
+                return contact.name
+        return ""
+
     def _on_call_clicked(self) -> None:
         number = self.number_edit.text()
         self._active_call = self.sip_engine.make_call(number)
@@ -217,11 +229,7 @@ class MainWindow(QMainWindow):
         self.hangup_button.setEnabled(True)
         self._set_dtmf_mode(True)
 
-        name = ""
-        for contact in contacts.load_contacts():
-            if contact.number == number:
-                name = contact.name
-                break
+        name = self._contact_name_for(number)
         self.call_details.set_active_call(name, number)
 
     def _on_hangup_clicked(self) -> None:
@@ -246,11 +254,7 @@ class MainWindow(QMainWindow):
         duration = 0
         if self._call_direction != "missed" and self._call_start_time is not None:
             duration = int((datetime.now() - self._call_start_time).total_seconds())
-        name = ""
-        for contact in contacts.load_contacts():
-            if contact.number == self._call_number:
-                name = contact.name
-                break
+        name = self._contact_name_for(self._call_number)
         entry = call_log.CallLogEntry(
             number=self._call_number or "",
             name=name,
@@ -279,12 +283,8 @@ class MainWindow(QMainWindow):
             self.sip_engine.answer(self._active_call)
             self.hangup_button.setEnabled(True)
             self._set_dtmf_mode(True)
-            name = ""
-            for contact in contacts.load_contacts():
-                if contact.number == self._call_number:
-                    name = contact.name
-                    break
-            self.call_details.set_active_call(name, self._call_number)
+            name = self._contact_name_for(self._call_number)
+            self.call_details.set_active_call(name, self._call_number or "")
         else:
             self._call_direction = "missed"
             self.sip_engine.hangup(self._active_call)

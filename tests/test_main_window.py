@@ -1,6 +1,6 @@
 import pytest
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QDockWidget, QMessageBox
 
 from voice2fritz import call_log as call_log_module
 from voice2fritz import config as config_module
@@ -262,6 +262,7 @@ def test_incoming_call_accept_answers_and_enables_controls(qtbot, monkeypatch):
     assert window._active_call is incoming_call
     assert window.hangup_button.isEnabled()
     assert window.call_details.mute_button.isEnabled()
+    assert window.call_details.name_label.text() == engine.remote_number
 
 
 def test_incoming_call_reject_hangs_up_and_resets_state(qtbot, monkeypatch):
@@ -349,6 +350,7 @@ def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
     window._on_account_saved(cfg)
 
     assert engine.registrations == [("fritz.box", "user123", "secret")]
+    assert window.account_label.text() == "Account: fritz.box"
 
 
 def test_completed_outgoing_call_appends_log_entry(qtbot, monkeypatch):
@@ -518,3 +520,26 @@ def test_call_details_docks_stacked_on_left(qtbot):
 
     assert window.dockWidgetArea(window.call_details_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
     assert window.dockWidgetArea(window.log_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
+
+
+def test_call_details_dock_is_not_closable(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert not (window.call_details_dock.features() & QDockWidget.DockWidgetFeature.DockWidgetClosable)
+
+
+def test_t9_letters_match_mapping(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    expected = {
+        "1": "", "2": "ABC", "3": "DEF",
+        "4": "GHI", "5": "JKL", "6": "MNO",
+        "7": "PQRS", "8": "TUV", "9": "WXYZ",
+        "*": "", "0": "+", "#": "",
+    }
+    for digit, letters in expected.items():
+        assert window.digit_letter_labels[digit].text() == letters
