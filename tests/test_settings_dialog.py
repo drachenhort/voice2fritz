@@ -1,5 +1,30 @@
+import pytest
+
 from voice2fritz import config
+from voice2fritz.audio import AudioDevice
 from voice2fritz.gui.settings_dialog import SettingsDialog
+
+
+class _FakeSipEngine:
+    def __init__(self, devices=None):
+        self._devices = devices or []
+        self.selected_capture = None
+        self.selected_playback = None
+
+    def list_devices(self):
+        return self._devices
+
+    def select_capture_device(self, device_id):
+        self.selected_capture = device_id
+
+    def select_playback_device(self, device_id):
+        self.selected_playback = device_id
+
+
+@pytest.fixture(autouse=True)
+def no_device_persistence(monkeypatch):
+    monkeypatch.setattr(config, "load_device_selection", lambda path=config.DEFAULT_CONFIG_PATH: (None, None))
+    monkeypatch.setattr(config, "save_device_selection", lambda capture, playback, path=config.DEFAULT_CONFIG_PATH: None)
 
 
 def test_save_button_persists_config_and_password(qtbot, tmp_path, monkeypatch):
@@ -9,7 +34,7 @@ def test_save_button_persists_config_and_password(qtbot, tmp_path, monkeypatch):
     monkeypatch.setattr(config, "save_config", lambda cfg, path=config.DEFAULT_CONFIG_PATH: saved_configs.append(cfg))
     monkeypatch.setattr(config, "set_password", lambda username, password: saved_passwords.append((username, password)))
 
-    dialog = SettingsDialog()
+    dialog = SettingsDialog(_FakeSipEngine())
     qtbot.addWidget(dialog)
 
     dialog.host_edit.setText("fritz.box")
@@ -30,7 +55,7 @@ def test_save_button_persists_google_priority_setting(qtbot, tmp_path, monkeypat
     monkeypatch.setattr(config, "set_password", lambda username, password: None)
     monkeypatch.setattr(config, "save_google_sync_overwrites_local", lambda value, path=config.DEFAULT_CONFIG_PATH: saved_values.append(value))
 
-    dialog = SettingsDialog()
+    dialog = SettingsDialog(_FakeSipEngine())
     qtbot.addWidget(dialog)
 
     dialog.host_edit.setText("fritz.box")
@@ -47,7 +72,77 @@ def test_save_button_persists_google_priority_setting(qtbot, tmp_path, monkeypat
 def test_constructor_loads_saved_google_priority_setting(qtbot, monkeypatch):
     monkeypatch.setattr(config, "load_google_sync_overwrites_local", lambda path=config.DEFAULT_CONFIG_PATH: False)
 
-    dialog = SettingsDialog()
+    dialog = SettingsDialog(_FakeSipEngine())
     qtbot.addWidget(dialog)
 
     assert dialog.google_priority_checkbox.isChecked() is False
+
+
+def _sample_devices():
+    return [
+        AudioDevice(id=0, name="Built-in Mic", has_input=True, has_output=False),
+        AudioDevice(id=1, name="Headset", has_input=True, has_output=True),
+    ]
+
+
+def test_device_combos_populated_from_engine(qtbot):
+    engine = _FakeSipEngine(_sample_devices())
+
+    dialog = SettingsDialog(engine)
+    qtbot.addWidget(dialog)
+
+    assert [dialog.capture_combo.itemText(i) for i in range(dialog.capture_combo.count())] == [
+        "Built-in Mic",
+        "Headset",
+    ]
+    assert [dialog.speaker_combo.itemText(i) for i in range(dialog.speaker_combo.count())] == ["Headset"]
+
+
+def test_initial_device_selection_applied_at_construction(qtbot):
+    engine = _FakeSipEngine(_sample_devices())
+
+    dialog = SettingsDialog(engine)
+    qtbot.addWidget(dialog)
+
+    assert engine.selected_capture == dialog.capture_combo.itemData(0)
+    assert engine.selected_playback == dialog.speaker_combo.itemData(0)
+
+
+def test_restores_saved_device_selection_on_construction(qtbot, monkeypatch):
+    monkeypatch.setattr(config, "load_device_selection", lambda path=config.DEFAULT_CONFIG_PATH: ("Headset", "Headset"))
+    engine = _FakeSipEngine(_sample_devices())
+
+    dialog = SettingsDialog(engine)
+    qtbot.addWidget(dialog)
+
+    assert dialog.capture_combo.currentText() == "Headset"
+    assert dialog.speaker_combo.currentText() == "Headset"
+    assert engine.selected_capture == 1
+    assert engine.selected_playback == 1
+
+
+def test_device_combo_selection_calls_engine(qtbot):
+    engine = _FakeSipEngine(_sample_devices())
+    dialog = SettingsDialog(engine)
+    qtbot.addWidget(dialog)
+
+    dialog.capture_combo.setCurrentIndex(1)
+
+    assert engine.selected_capture == 1
+
+
+def test_device_selection_change_persists_choice(qtbot, monkeypatch):
+    saved = []
+    monkeypatch.setattr(
+        config,
+        "save_device_selection",
+        lambda capture, playback, path=config.DEFAULT_CONFIG_PATH: saved.append((capture, playback)),
+    )
+    engine = _FakeSipEngine(_sample_devices())
+    dialog = SettingsDialog(engine)
+    qtbot.addWidget(dialog)
+    saved.clear()
+
+    dialog.capture_combo.setCurrentIndex(1)
+
+    assert saved == [("Headset", "Headset")]
