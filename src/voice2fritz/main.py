@@ -3,6 +3,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from voice2fritz import config
+from voice2fritz.gui import theme
 from voice2fritz.gui.main_window import MainWindow
 from voice2fritz.gui.settings_dialog import SettingsDialog
 from voice2fritz.sip_engine import SipEngine
@@ -10,6 +11,7 @@ from voice2fritz.sip_engine import SipEngine
 
 def main() -> None:
     app = QApplication(sys.argv)
+    app.setStyleSheet(theme.DARK_STYLESHEET)
 
     sip_engine = SipEngine()
     sip_engine.start()
