@@ -50,7 +50,7 @@ QPushButton[dtmfMode="true"] {
 QPushButton#dialpadButton {
     font-weight: bold;
     font-size: 22px;
-    padding: 2px 1px;
+    padding: 1px;
 }
 
 QPushButton#navButton {
