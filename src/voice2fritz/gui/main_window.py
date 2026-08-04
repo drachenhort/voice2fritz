@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -18,6 +19,7 @@ from voice2fritz.audio import restore_saved_devices
 from voice2fritz.gui.call_details_panel import CallDetailsPanel
 from voice2fritz.gui.call_log_panel import CallLogPanel
 from voice2fritz.gui.contacts_dialog import ContactsDialog
+from voice2fritz.gui.contacts_panel import ContactsPanel
 from voice2fritz.gui.incoming_call_popup import IncomingCallPopup
 from voice2fritz.gui.settings_dialog import SettingsDialog
 
@@ -52,6 +54,7 @@ class MainWindow(QMainWindow):
         self.digit_buttons: dict[str, QPushButton] = {}
         self.digit_letter_labels: dict[str, QLabel] = {}
         dialpad_grid = QGridLayout()
+        dialpad_grid.setSpacing(0)
         dialpad_rows = [
             ["1", "2", "3"],
             ["4", "5", "6"],
@@ -138,12 +141,20 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.call_details_dock)
 
         self.log_panel = CallLogPanel()
-        self.log_dock = QDockWidget("Call Log", self)
-        self.log_dock.setWidget(self.log_panel)
+        self.contacts_panel = ContactsPanel()
+
+        self.log_tabs = QTabWidget()
+        self.log_tabs.addTab(self.log_panel, "Call Log")
+        self.log_tabs.addTab(self.contacts_panel, "Contacts")
+
+        self.log_dock = QDockWidget("", self)
+        self.log_dock.setWidget(self.log_tabs)
         self.log_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.log_dock.setFixedWidth(260)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.log_dock)
+
         self.log_panel.entryActivated.connect(self.number_edit.setText)
+        self.contacts_panel.contactSelected.connect(self.number_edit.setText)
 
         self._connect_signals()
         restore_saved_devices(self.sip_engine)

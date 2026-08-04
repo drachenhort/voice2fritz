@@ -462,6 +462,26 @@ def test_log_dock_is_always_visible(qtbot):
     assert not hasattr(window, "log_button")
 
 
+def test_contacts_tab_selection_fills_number_field(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.contacts_panel.contactSelected.emit("+4917612345678")
+
+    assert window.number_edit.text() == "+4917612345678"
+
+
+def test_log_dock_holds_a_tab_widget_with_log_and_contacts(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.log_dock.widget() is window.log_tabs
+    assert window.log_tabs.indexOf(window.log_panel) >= 0
+    assert window.log_tabs.indexOf(window.contacts_panel) >= 0
+
+
 def test_log_panel_entry_activated_fills_number_field(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
