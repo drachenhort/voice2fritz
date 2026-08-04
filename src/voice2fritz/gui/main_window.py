@@ -17,9 +17,17 @@ from PySide6.QtWidgets import (
 
 from voice2fritz import call_log, config, contacts
 from voice2fritz.audio import input_devices, output_devices
+from voice2fritz.gui.call_details_panel import CallDetailsPanel
 from voice2fritz.gui.call_log_panel import CallLogPanel
 from voice2fritz.gui.contacts_dialog import ContactsDialog
 from voice2fritz.gui.settings_dialog import SettingsDialog
+
+_T9_LETTERS = {
+    "1": "", "2": "ABC", "3": "DEF",
+    "4": "GHI", "5": "JKL", "6": "MNO",
+    "7": "PQRS", "8": "TUV", "9": "WXYZ",
+    "*": "", "0": "+", "#": "",
+}
 
 
 class MainWindow(QMainWindow):
@@ -34,6 +42,12 @@ class MainWindow(QMainWindow):
 
         self.number_edit = QLineEdit()
         self.number_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.backspace_button = QPushButton("⌫")
+        self.backspace_button.setToolTip("Backspace")
+
+        number_row = QHBoxLayout()
+        number_row.addWidget(self.number_edit)
+        number_row.addWidget(self.backspace_button)
 
         self.digit_buttons: dict[str, QPushButton] = {}
         dialpad_grid = QGridLayout()
@@ -47,32 +61,40 @@ class MainWindow(QMainWindow):
             for col, digit in enumerate(digits):
                 button = QPushButton(digit)
                 button.clicked.connect(lambda checked=False, d=digit: self._on_digit_clicked(d))
-                dialpad_grid.addWidget(button, row, col)
+
+                letters_label = QLabel(_T9_LETTERS[digit])
+                letters_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                letters_label.setStyleSheet("color: #8a8f98; font-size: 9px;")
+
+                cell = QVBoxLayout()
+                cell.setSpacing(0)
+                cell.addWidget(button)
+                cell.addWidget(letters_label)
+                cell_widget = QWidget()
+                cell_widget.setLayout(cell)
+
+                dialpad_grid.addWidget(cell_widget, row, col)
                 self.digit_buttons[digit] = button
 
-        dialpad_column = QVBoxLayout()
-        dialpad_column.addWidget(self.number_edit)
-        dialpad_column.addLayout(dialpad_grid)
-
-        self.call_button = QPushButton("📞")
+        self.call_button = QPushButton("📞 CALL")
         self.call_button.setObjectName("callButton")
         self.call_button.setToolTip("Call")
+
+        dialpad_column = QVBoxLayout()
+        dialpad_column.addLayout(number_row)
+        dialpad_column.addLayout(dialpad_grid)
+        dialpad_column.addWidget(self.call_button)
+
         self.hangup_button = QPushButton("✕")
         self.hangup_button.setToolTip("Hang up")
         self.hangup_button.setEnabled(False)
-        self.mute_button = QPushButton("🔇")
-        self.mute_button.setToolTip("Mute")
-        self.mute_button.setCheckable(True)
-        self.mute_button.setEnabled(False)
         self.settings_button = QPushButton("⚙")
         self.settings_button.setToolTip("Settings")
         self.contacts_button = QPushButton("Contacts")
         self.log_button = QPushButton("Log")
 
         controls_column = QVBoxLayout()
-        controls_column.addWidget(self.call_button)
         controls_column.addWidget(self.hangup_button)
-        controls_column.addWidget(self.mute_button)
         controls_column.addWidget(self.settings_button)
         controls_column.addWidget(self.contacts_button)
         controls_column.addWidget(self.log_button)
@@ -82,17 +104,17 @@ class MainWindow(QMainWindow):
         top_row.addLayout(controls_column)
 
         self.capture_combo = QComboBox()
-        self.playback_combo = QComboBox()
-        self.status_label = QLabel("Not registered")
 
         device_row = QHBoxLayout()
         device_row.addWidget(QLabel("Mic:"))
         device_row.addWidget(self.capture_combo)
-        device_row.addWidget(QLabel("Speaker:"))
-        device_row.addWidget(self.playback_combo)
+
+        self.sip_status_label = QLabel("SIP Status: Not registered")
+        self.account_label = QLabel("Account: —")
 
         layout = QVBoxLayout()
-        layout.addWidget(self.status_label)
+        layout.addWidget(self.sip_status_label)
+        layout.addWidget(self.account_label)
         layout.addLayout(top_row)
         layout.addLayout(device_row)
 
@@ -100,22 +122,27 @@ class MainWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-        self._populate_devices()
-        self._connect_signals()
-        self._restore_device_selection()
+        self.call_details = CallDetailsPanel()
+        self.call_details_dock = QDockWidget("Call Details", self)
+        self.call_details_dock.setWidget(self.call_details)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.call_details_dock)
 
         self.log_panel = CallLogPanel()
         self.log_dock = QDockWidget("Call Log", self)
         self.log_dock.setWidget(self.log_panel)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.log_dock)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.log_dock)
         self.log_panel.entryActivated.connect(self.number_edit.setText)
+
+        self._populate_devices()
+        self._connect_signals()
+        self._restore_device_selection()
 
     def _populate_devices(self) -> None:
         devices = self.sip_engine.list_devices()
         for device in input_devices(devices):
             self.capture_combo.addItem(device.name, device.id)
         for device in output_devices(devices):
-            self.playback_combo.addItem(device.name, device.id)
+            self.call_details.speaker_combo.addItem(device.name, device.id)
 
     def _restore_device_selection(self) -> None:
         capture_name, playback_name = config.load_device_selection()
@@ -128,20 +155,21 @@ class MainWindow(QMainWindow):
             self._on_capture_changed(self.capture_combo.currentIndex())
 
         if playback_name is not None:
-            index = self.playback_combo.findText(playback_name)
+            index = self.call_details.speaker_combo.findText(playback_name)
             if index >= 0:
-                self.playback_combo.setCurrentIndex(index)
-        if self.playback_combo.count() > 0:
-            self._on_playback_changed(self.playback_combo.currentIndex())
+                self.call_details.speaker_combo.setCurrentIndex(index)
+        if self.call_details.speaker_combo.count() > 0:
+            self._on_playback_changed(self.call_details.speaker_combo.currentIndex())
 
     def _connect_signals(self) -> None:
         self.call_button.clicked.connect(self._on_call_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
-        self.mute_button.clicked.connect(self._on_mute_clicked)
+        self.backspace_button.clicked.connect(self._on_backspace_clicked)
+        self.call_details.mute_button.clicked.connect(self._on_mute_clicked)
         self.capture_combo.currentIndexChanged.connect(self._on_capture_changed)
-        self.playback_combo.currentIndexChanged.connect(self._on_playback_changed)
-        self.sip_engine.registrationStateChanged.connect(self.status_label.setText)
-        self.sip_engine.callStateChanged.connect(self.status_label.setText)
+        self.call_details.speaker_combo.currentIndexChanged.connect(self._on_playback_changed)
+        self.sip_engine.registrationStateChanged.connect(self._on_registration_state_changed)
+        self.sip_engine.callStateChanged.connect(self._on_call_state_changed)
         self.sip_engine.callEnded.connect(self._on_call_ended)
         self.sip_engine.incomingCall.connect(self._on_incoming_call)
         self.settings_button.clicked.connect(self._on_settings_clicked)
@@ -161,6 +189,19 @@ class MainWindow(QMainWindow):
         else:
             self.number_edit.setText(self.number_edit.text() + digit)
 
+    def _on_backspace_clicked(self) -> None:
+        self.number_edit.setText(self.number_edit.text()[:-1])
+
+    def _on_registration_state_changed(self, text: str) -> None:
+        self.sip_status_label.setText(f"SIP Status: {text}")
+
+    def _on_call_state_changed(self, text: str) -> None:
+        self.sip_status_label.setText(f"SIP Status: {text}")
+        self.call_details.set_state_text(text)
+
+    def set_account_host(self, host: str) -> None:
+        self.account_label.setText(f"Account: {host}")
+
     def _set_dtmf_mode(self, enabled: bool) -> None:
         for button in self.digit_buttons.values():
             button.setProperty("dtmfMode", enabled)
@@ -174,8 +215,14 @@ class MainWindow(QMainWindow):
         self._call_number = number
         self._call_start_time = datetime.now()
         self.hangup_button.setEnabled(True)
-        self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
+
+        name = ""
+        for contact in contacts.load_contacts():
+            if contact.number == number:
+                name = contact.name
+                break
+        self.call_details.set_active_call(name, number)
 
     def _on_hangup_clicked(self) -> None:
         if self._active_call is not None:
@@ -184,14 +231,13 @@ class MainWindow(QMainWindow):
 
     def _on_mute_clicked(self) -> None:
         if self._active_call is not None:
-            self.sip_engine.set_mute(self._active_call, self.mute_button.isChecked())
+            self.sip_engine.set_mute(self._active_call, self.call_details.mute_button.isChecked())
 
     def _on_call_ended(self) -> None:
         self._active_call = None
         self.hangup_button.setEnabled(False)
-        self.mute_button.setEnabled(False)
-        self.mute_button.setChecked(False)
         self._set_dtmf_mode(False)
+        self.call_details.set_idle()
         self._log_completed_call()
 
     def _log_completed_call(self) -> None:
@@ -232,8 +278,13 @@ class MainWindow(QMainWindow):
         if answer == QMessageBox.StandardButton.Yes:
             self.sip_engine.answer(self._active_call)
             self.hangup_button.setEnabled(True)
-            self.mute_button.setEnabled(True)
             self._set_dtmf_mode(True)
+            name = ""
+            for contact in contacts.load_contacts():
+                if contact.number == self._call_number:
+                    name = contact.name
+                    break
+            self.call_details.set_active_call(name, self._call_number)
         else:
             self._call_direction = "missed"
             self.sip_engine.hangup(self._active_call)
@@ -255,6 +306,7 @@ class MainWindow(QMainWindow):
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:
         password = config.get_password(cfg.username) or ""
         self.sip_engine.register(cfg.host, cfg.username, password)
+        self.set_account_host(cfg.host)
 
     def _on_capture_changed(self, index: int) -> None:
         if index >= 0:
@@ -263,10 +315,10 @@ class MainWindow(QMainWindow):
 
     def _on_playback_changed(self, index: int) -> None:
         if index >= 0:
-            self.sip_engine.select_playback_device(self.playback_combo.itemData(index))
+            self.sip_engine.select_playback_device(self.call_details.speaker_combo.itemData(index))
             self._save_device_selection()
 
     def _save_device_selection(self) -> None:
         capture_name = self.capture_combo.currentText() or None
-        playback_name = self.playback_combo.currentText() or None
+        playback_name = self.call_details.speaker_combo.currentText() or None
         config.save_device_selection(capture_name, playback_name)

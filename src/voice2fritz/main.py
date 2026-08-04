@@ -30,6 +30,7 @@ def main() -> None:
         account = config.load_config()
 
     window = MainWindow(sip_engine)
+    window.set_account_host(account.host)
     window.show()
 
     password = config.get_password(account.username) or ""

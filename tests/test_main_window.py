@@ -83,7 +83,7 @@ def test_device_combos_populated_from_engine(qtbot):
         "Built-in Mic",
         "Headset",
     ]
-    assert [window.playback_combo.itemText(i) for i in range(window.playback_combo.count())] == ["Headset"]
+    assert [window.call_details.speaker_combo.itemText(i) for i in range(window.call_details.speaker_combo.count())] == ["Headset"]
 
 
 def test_call_button_calls_engine_make_call_with_entered_number(qtbot):
@@ -117,7 +117,7 @@ def test_mute_button_toggles_engine_mute(qtbot):
     window.number_edit.setText("01234567")
     window.call_button.click()
     active_call = window._active_call
-    window.mute_button.click()
+    window.call_details.mute_button.click()
 
     assert engine.mutes == [(active_call, True)]
 
@@ -227,7 +227,7 @@ def test_registration_state_updates_status_label(qtbot):
 
     engine.registrationStateChanged.emit("200 OK")
 
-    assert window.status_label.text() == "200 OK"
+    assert window.sip_status_label.text() == "SIP Status: 200 OK"
 
 
 def test_device_combo_selection_calls_engine(qtbot):
@@ -246,7 +246,7 @@ def test_initial_device_selection_applied_at_startup(qtbot):
     qtbot.addWidget(window)
 
     assert engine.selected_capture == window.capture_combo.itemData(0)
-    assert engine.selected_playback == window.playback_combo.itemData(0)
+    assert engine.selected_playback == window.call_details.speaker_combo.itemData(0)
 
 
 def test_incoming_call_accept_answers_and_enables_controls(qtbot, monkeypatch):
@@ -261,7 +261,7 @@ def test_incoming_call_accept_answers_and_enables_controls(qtbot, monkeypatch):
     assert engine.answers == [incoming_call]
     assert window._active_call is incoming_call
     assert window.hangup_button.isEnabled()
-    assert window.mute_button.isEnabled()
+    assert window.call_details.mute_button.isEnabled()
 
 
 def test_incoming_call_reject_hangs_up_and_resets_state(qtbot, monkeypatch):
@@ -276,7 +276,7 @@ def test_incoming_call_reject_hangs_up_and_resets_state(qtbot, monkeypatch):
     assert engine.hangups == [incoming_call]
     assert window._active_call is None
     assert not window.hangup_button.isEnabled()
-    assert not window.mute_button.isEnabled()
+    assert not window.call_details.mute_button.isEnabled()
 
 
 def test_restores_saved_device_selection_on_startup(qtbot, monkeypatch):
@@ -287,7 +287,7 @@ def test_restores_saved_device_selection_on_startup(qtbot, monkeypatch):
     qtbot.addWidget(window)
 
     assert window.capture_combo.currentText() == "Headset"
-    assert window.playback_combo.currentText() == "Headset"
+    assert window.call_details.speaker_combo.currentText() == "Headset"
     assert engine.selected_capture == 1
     assert engine.selected_playback == 1
 
@@ -469,3 +469,52 @@ def test_completing_a_call_refreshes_log_panel_live(qtbot, monkeypatch):
     window.hangup_button.click()
 
     assert window.log_panel.entry_list.count() == 1
+
+
+def test_backspace_button_removes_last_character(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("0123")
+    window.backspace_button.click()
+
+    assert window.number_edit.text() == "012"
+
+
+def test_set_account_host_updates_account_label(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.set_account_host("fritz.box")
+
+    assert window.account_label.text() == "Account: fritz.box"
+
+
+def test_outgoing_call_updates_call_details_panel(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("+4917612345678")
+    window.call_button.click()
+
+    assert window.call_details.name_label.text() == "+4917612345678"
+    assert window.call_details.state_label.text() == "Active"
+
+    window.hangup_button.click()
+
+    assert window.call_details.name_label.text() == "No active call"
+
+
+def test_call_details_docks_stacked_on_left(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.show()
+
+    from PySide6.QtCore import Qt
+
+    assert window.dockWidgetArea(window.call_details_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
+    assert window.dockWidgetArea(window.log_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
