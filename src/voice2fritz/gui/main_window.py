@@ -3,6 +3,7 @@ from datetime import datetime
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
+    QDockWidget,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -16,7 +17,7 @@ from PySide6.QtWidgets import (
 
 from voice2fritz import call_log, config, contacts
 from voice2fritz.audio import input_devices, output_devices
-from voice2fritz.gui.call_log_dialog import CallLogDialog
+from voice2fritz.gui.call_log_panel import CallLogPanel
 from voice2fritz.gui.contacts_dialog import ContactsDialog
 from voice2fritz.gui.settings_dialog import SettingsDialog
 
@@ -102,6 +103,12 @@ class MainWindow(QMainWindow):
         self._populate_devices()
         self._connect_signals()
         self._restore_device_selection()
+
+        self.log_panel = CallLogPanel()
+        self.log_dock = QDockWidget("Call Log", self)
+        self.log_dock.setWidget(self.log_panel)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.log_dock)
+        self.log_panel.entryActivated.connect(self.number_edit.setText)
 
     def _populate_devices(self) -> None:
         devices = self.sip_engine.list_devices()
@@ -206,6 +213,7 @@ class MainWindow(QMainWindow):
             duration_seconds=duration,
         )
         call_log.append_call_log_entry(entry)
+        self.log_panel._reload_list()
         self._call_direction = None
         self._call_number = None
         self._call_start_time = None
@@ -242,9 +250,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _on_log_clicked(self) -> None:
-        dialog = CallLogDialog(self)
-        dialog.callSelected.connect(self.number_edit.setText)
-        dialog.exec()
+        self.log_dock.setVisible(not self.log_dock.isVisible())
 
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:
         password = config.get_password(cfg.username) or ""

@@ -425,29 +425,47 @@ def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):
     assert logged[0].name == "Anna Schmidt"
 
 
-def test_log_button_opens_dialog_and_fills_number_on_selection(qtbot, monkeypatch):
-    from PySide6.QtCore import QObject, Signal
+def test_log_button_toggles_dock_visibility(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.show()
 
-    class FakeCallLogDialogQt(QObject):
-        callSelected = Signal(str)
+    assert window.log_dock.isVisible()
 
-        def __init__(self, parent=None):
-            super().__init__()
-            FakeCallLogDialogQt.last_instance = self
+    window.log_button.click()
+    assert not window.log_dock.isVisible()
 
-        def exec(self):
-            return None
+    window.log_button.click()
+    assert window.log_dock.isVisible()
 
-    monkeypatch.setattr("voice2fritz.gui.main_window.CallLogDialog", FakeCallLogDialogQt)
 
+def test_log_panel_entry_activated_fills_number_field(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
-    window.log_button.click()
-
-    assert FakeCallLogDialogQt.last_instance is not None
-
-    FakeCallLogDialogQt.last_instance.callSelected.emit("+4917612345678")
+    window.log_panel.entryActivated.emit("+4917612345678")
 
     assert window.number_edit.text() == "+4917612345678"
+
+
+def test_completing_a_call_refreshes_log_panel_live(qtbot, monkeypatch):
+    logged_entries = []
+
+    def fake_append(entry, path=call_log_module.DEFAULT_CALL_LOG_PATH):
+        logged_entries.append(entry)
+
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", fake_append)
+    monkeypatch.setattr(call_log_module, "load_call_log", lambda path=call_log_module.DEFAULT_CALL_LOG_PATH: logged_entries)
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    assert window.log_panel.entry_list.count() == 0
+
+    window.number_edit.setText("+4917612345678")
+    window.call_button.click()
+    window.hangup_button.click()
+
+    assert window.log_panel.entry_list.count() == 1

@@ -1,6 +1,5 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -60,13 +59,11 @@ def _row_widget(entry: call_log_module.CallLogEntry) -> QWidget:
     return widget
 
 
-class CallLogDialog(QDialog):
-    callSelected = Signal(str)
+class CallLogPanel(QWidget):
+    entryActivated = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Call Log")
-        self.resize(420, 480)
 
         self.entry_list = QListWidget()
         self.clear_button = QPushButton("Clear")
@@ -99,5 +96,4 @@ class CallLogDialog(QDialog):
 
     def _on_item_activated(self, item: QListWidgetItem) -> None:
         entry: call_log_module.CallLogEntry = item.data(Qt.ItemDataRole.UserRole)
-        self.callSelected.emit(entry.number)
-        self.accept()
+        self.entryActivated.emit(entry.number)
