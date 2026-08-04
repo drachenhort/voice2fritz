@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1]
+
+### Fixed
+- The app was quitting outright when the incoming-call popup closed
+  (e.g. after declining) while the main window was minimized to the
+  tray — Qt's default "quit on last window closed" fired because no
+  window was visible at that moment.
+
 ## [0.5.0]
 
 ### Added
