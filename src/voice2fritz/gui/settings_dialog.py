@@ -15,12 +15,17 @@ class SettingsDialog(QDialog):
         self.username_edit = QLineEdit()
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.fritzbox_username_edit = QLineEdit()
+        self.fritzbox_password_edit = QLineEdit()
+        self.fritzbox_password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.save_button = QPushButton("Save")
 
         form = QFormLayout()
         form.addRow("Host", self.host_edit)
         form.addRow("Username", self.username_edit)
         form.addRow("Password", self.password_edit)
+        form.addRow("FritzBox Username", self.fritzbox_username_edit)
+        form.addRow("FritzBox Password", self.fritzbox_password_edit)
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
@@ -35,5 +40,11 @@ class SettingsDialog(QDialog):
         )
         config.save_config(cfg)
         config.set_password(cfg.username, self.password_edit.text())
+
+        fritzbox_username = self.fritzbox_username_edit.text()
+        if fritzbox_username:
+            config.save_fritzbox_username(fritzbox_username)
+            config.set_fritzbox_password(fritzbox_username, self.fritzbox_password_edit.text())
+
         self.accountSaved.emit(cfg)
         self.accept()
