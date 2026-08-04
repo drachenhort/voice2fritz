@@ -1,7 +1,5 @@
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
-    QComboBox,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -23,12 +21,6 @@ class CallDetailsPanel(QWidget):
         self.mute_button.setToolTip("Mute")
         self.mute_button.setCheckable(True)
 
-        self.speaker_combo = QComboBox()
-
-        speaker_row = QHBoxLayout()
-        speaker_row.addWidget(QLabel("Speaker:"))
-        speaker_row.addWidget(self.speaker_combo)
-
         layout = QVBoxLayout(self)
         layout.setSpacing(6)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -36,7 +28,6 @@ class CallDetailsPanel(QWidget):
         layout.addWidget(self.state_label)
         layout.addWidget(self.duration_label)
         layout.addWidget(self.mute_button)
-        layout.addLayout(speaker_row)
         layout.addStretch()
 
         self._seconds = 0
