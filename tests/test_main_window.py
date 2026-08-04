@@ -1,10 +1,11 @@
 import pytest
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QDockWidget, QMessageBox
+from PySide6.QtWidgets import QDockWidget
 
 from voice2fritz import call_log as call_log_module
 from voice2fritz import config as config_module
 from voice2fritz import contacts as contacts_module
+from voice2fritz import ringtone
 from voice2fritz.audio import AudioDevice
 from voice2fritz.gui.main_window import MainWindow
 
@@ -13,6 +14,12 @@ from voice2fritz.gui.main_window import MainWindow
 def no_device_persistence(monkeypatch):
     monkeypatch.setattr(config_module, "load_device_selection", lambda path=config_module.DEFAULT_CONFIG_PATH: (None, None))
     monkeypatch.setattr(config_module, "save_device_selection", lambda capture, playback, path=config_module.DEFAULT_CONFIG_PATH: None)
+
+
+@pytest.fixture(autouse=True)
+def no_ringtone_playback(monkeypatch):
+    monkeypatch.setattr(ringtone, "play_ringtone", lambda: None)
+    monkeypatch.setattr(ringtone, "stop_ringtone", lambda: None)
 
 
 @pytest.fixture(autouse=True)
@@ -249,35 +256,39 @@ def test_initial_device_selection_applied_at_startup(qtbot):
     assert engine.selected_playback == window.call_details.speaker_combo.itemData(0)
 
 
-def test_incoming_call_accept_answers_and_enables_controls(qtbot, monkeypatch):
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+def test_incoming_call_accept_answers_and_enables_controls(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
     incoming_call = object()
     engine.incomingCall.emit(incoming_call)
+    assert window.incoming_popup is not None
+
+    window.incoming_popup.answered.emit()
 
     assert engine.answers == [incoming_call]
     assert window._active_call is incoming_call
     assert window.hangup_button.isEnabled()
     assert window.call_details.mute_button.isEnabled()
     assert window.call_details.name_label.text() == engine.remote_number
+    assert window.incoming_popup is None
 
 
-def test_incoming_call_reject_hangs_up_and_resets_state(qtbot, monkeypatch):
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+def test_incoming_call_reject_hangs_up_and_resets_state(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
     incoming_call = object()
     engine.incomingCall.emit(incoming_call)
+    window.incoming_popup.declined.emit()
 
     assert engine.hangups == [incoming_call]
     assert window._active_call is None
     assert not window.hangup_button.isEnabled()
     assert not window.call_details.mute_button.isEnabled()
+    assert window.incoming_popup is None
 
 
 def test_restores_saved_device_selection_on_startup(qtbot, monkeypatch):
@@ -372,7 +383,6 @@ def test_completed_outgoing_call_appends_log_entry(qtbot, monkeypatch):
 
 
 def test_accepted_incoming_call_appends_log_entry(qtbot, monkeypatch):
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
     logged = []
     monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
 
@@ -382,6 +392,7 @@ def test_accepted_incoming_call_appends_log_entry(qtbot, monkeypatch):
 
     incoming_call = object()
     engine.incomingCall.emit(incoming_call)
+    window.incoming_popup.answered.emit()
     window.hangup_button.click()
 
     assert len(logged) == 1
@@ -390,7 +401,6 @@ def test_accepted_incoming_call_appends_log_entry(qtbot, monkeypatch):
 
 
 def test_rejected_incoming_call_appends_missed_log_entry(qtbot, monkeypatch):
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
     logged = []
     monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
 
@@ -400,11 +410,33 @@ def test_rejected_incoming_call_appends_missed_log_entry(qtbot, monkeypatch):
 
     incoming_call = object()
     engine.incomingCall.emit(incoming_call)
+    window.incoming_popup.declined.emit()
 
     assert len(logged) == 1
     assert logged[0].number == engine.remote_number
     assert logged[0].direction == "missed"
     assert logged[0].duration_seconds == 0
+
+
+def test_incoming_call_auto_dismisses_popup_on_remote_hangup(qtbot, monkeypatch):
+    stopped = []
+    monkeypatch.setattr(ringtone, "stop_ringtone", lambda: stopped.append(True))
+    logged = []
+    monkeypatch.setattr(call_log_module, "append_call_log_entry", lambda entry, path=call_log_module.DEFAULT_CALL_LOG_PATH: logged.append(entry))
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+    assert window.incoming_popup is not None
+
+    engine.callEnded.emit()
+
+    assert window.incoming_popup is None
+    assert stopped == [True]
+    assert logged[0].direction == "missed"
 
 
 def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):

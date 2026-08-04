@@ -9,17 +9,17 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
-from voice2fritz import call_log, config, contacts
+from voice2fritz import call_log, config, contacts, ringtone
 from voice2fritz.audio import input_devices, output_devices
 from voice2fritz.gui.call_details_panel import CallDetailsPanel
 from voice2fritz.gui.call_log_panel import CallLogPanel
 from voice2fritz.gui.contacts_dialog import ContactsDialog
+from voice2fritz.gui.incoming_call_popup import IncomingCallPopup
 from voice2fritz.gui.settings_dialog import SettingsDialog
 
 _T9_LETTERS = {
@@ -39,6 +39,7 @@ class MainWindow(QMainWindow):
         self._call_direction: str | None = None
         self._call_number: str | None = None
         self._call_start_time: datetime | None = None
+        self.incoming_popup: IncomingCallPopup | None = None
 
         self.number_edit = QLineEdit()
         self.number_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
@@ -242,6 +243,10 @@ class MainWindow(QMainWindow):
             self.sip_engine.set_mute(self._active_call, self.call_details.mute_button.isChecked())
 
     def _on_call_ended(self) -> None:
+        if self.incoming_popup is not None:
+            self._close_incoming_popup()
+            if self._call_direction == "incoming":
+                self._call_direction = "missed"
         self._active_call = None
         self.hangup_button.setEnabled(False)
         self._set_dtmf_mode(False)
@@ -273,22 +278,33 @@ class MainWindow(QMainWindow):
         self._call_direction = "incoming"
         self._call_number = self.sip_engine.get_remote_number(call)
         self._call_start_time = datetime.now()
-        answer = QMessageBox.question(
-            self,
-            "Incoming call",
-            "Incoming call. Answer?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer == QMessageBox.StandardButton.Yes:
-            self.sip_engine.answer(self._active_call)
-            self.hangup_button.setEnabled(True)
-            self._set_dtmf_mode(True)
-            name = self._contact_name_for(self._call_number)
-            self.call_details.set_active_call(name, self._call_number or "")
-        else:
-            self._call_direction = "missed"
-            self.sip_engine.hangup(self._active_call)
-            self._on_call_ended()
+
+        name = self._contact_name_for(self._call_number)
+        self.incoming_popup = IncomingCallPopup(name, self._call_number or "")
+        self.incoming_popup.answered.connect(self._on_incoming_call_answered)
+        self.incoming_popup.declined.connect(self._on_incoming_call_declined)
+        ringtone.play_ringtone()
+        self.incoming_popup.show()
+
+    def _on_incoming_call_answered(self) -> None:
+        self._close_incoming_popup()
+        self.sip_engine.answer(self._active_call)
+        self.hangup_button.setEnabled(True)
+        self._set_dtmf_mode(True)
+        name = self._contact_name_for(self._call_number)
+        self.call_details.set_active_call(name, self._call_number or "")
+
+    def _on_incoming_call_declined(self) -> None:
+        self._close_incoming_popup()
+        self._call_direction = "missed"
+        self.sip_engine.hangup(self._active_call)
+        self._on_call_ended()
+
+    def _close_incoming_popup(self) -> None:
+        ringtone.stop_ringtone()
+        if self.incoming_popup is not None:
+            self.incoming_popup.close()
+            self.incoming_popup = None
 
     def _on_settings_clicked(self) -> None:
         dialog = SettingsDialog(self)
