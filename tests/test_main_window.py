@@ -452,19 +452,14 @@ def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):
     assert logged[0].name == "Anna Schmidt"
 
 
-def test_log_button_toggles_dock_visibility(qtbot):
+def test_log_dock_is_always_visible(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
     window.show()
 
     assert window.log_dock.isVisible()
-
-    window.log_button.click()
-    assert not window.log_dock.isVisible()
-
-    window.log_button.click()
-    assert window.log_dock.isVisible()
+    assert not hasattr(window, "log_button")
 
 
 def test_log_panel_entry_activated_fills_number_field(qtbot):
