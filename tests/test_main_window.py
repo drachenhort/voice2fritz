@@ -537,20 +537,20 @@ def test_call_details_docks_stacked_on_left(qtbot):
     assert window.dockWidgetArea(window.log_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
 
 
-def test_call_details_dock_is_not_closable(qtbot):
+def test_call_details_dock_is_fixed_in_place(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
-    assert not (window.call_details_dock.features() & QDockWidget.DockWidgetFeature.DockWidgetClosable)
+    assert window.call_details_dock.features() == QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
 
 
-def test_log_dock_is_not_closable(qtbot):
+def test_log_dock_is_fixed_in_place(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
-    assert not (window.log_dock.features() & QDockWidget.DockWidgetFeature.DockWidgetClosable)
+    assert window.log_dock.features() == QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
 
 
 def test_t9_letters_match_mapping(qtbot):

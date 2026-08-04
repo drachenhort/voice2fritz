@@ -136,19 +136,13 @@ class MainWindow(QMainWindow):
         self.call_details = CallDetailsPanel()
         self.call_details_dock = QDockWidget("Call Details", self)
         self.call_details_dock.setWidget(self.call_details)
-        self.call_details_dock.setFeatures(
-            QDockWidget.DockWidgetFeature.DockWidgetMovable
-            | QDockWidget.DockWidgetFeature.DockWidgetFloatable
-        )
+        self.call_details_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.call_details_dock)
 
         self.log_panel = CallLogPanel()
         self.log_dock = QDockWidget("Call Log", self)
         self.log_dock.setWidget(self.log_panel)
-        self.log_dock.setFeatures(
-            QDockWidget.DockWidgetFeature.DockWidgetMovable
-            | QDockWidget.DockWidgetFeature.DockWidgetFloatable
-        )
+        self.log_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.log_dock)
         self.log_panel.entryActivated.connect(self.number_edit.setText)
 
