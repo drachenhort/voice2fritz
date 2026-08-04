@@ -1,8 +1,16 @@
+import pytest
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
+from voice2fritz import config as config_module
 from voice2fritz.audio import AudioDevice
 from voice2fritz.gui.main_window import MainWindow
+
+
+@pytest.fixture(autouse=True)
+def no_device_persistence(monkeypatch):
+    monkeypatch.setattr(config_module, "load_device_selection", lambda path=config_module.DEFAULT_CONFIG_PATH: (None, None))
+    monkeypatch.setattr(config_module, "save_device_selection", lambda capture, playback, path=config_module.DEFAULT_CONFIG_PATH: None)
 
 
 class FakeSipEngine(QObject):
@@ -157,9 +165,38 @@ def test_incoming_call_reject_hangs_up_and_resets_state(qtbot, monkeypatch):
     assert not window.mute_button.isEnabled()
 
 
-def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
-    from voice2fritz import config as config_module
+def test_restores_saved_device_selection_on_startup(qtbot, monkeypatch):
+    monkeypatch.setattr(config_module, "load_device_selection", lambda path=config_module.DEFAULT_CONFIG_PATH: ("Headset", "Headset"))
 
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.capture_combo.currentText() == "Headset"
+    assert window.playback_combo.currentText() == "Headset"
+    assert engine.selected_capture == 1
+    assert engine.selected_playback == 1
+
+
+def test_device_selection_change_persists_choice(qtbot, monkeypatch):
+    saved = []
+    monkeypatch.setattr(
+        config_module,
+        "save_device_selection",
+        lambda capture, playback, path=config_module.DEFAULT_CONFIG_PATH: saved.append((capture, playback)),
+    )
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    saved.clear()
+
+    window.capture_combo.setCurrentIndex(1)
+
+    assert saved == [("Headset", "Headset")]
+
+
+def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)

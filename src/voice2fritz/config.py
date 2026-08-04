@@ -14,19 +14,48 @@ class AccountConfig:
     username: str
 
 
-def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AccountConfig | None:
+def _read_raw(path: Path) -> dict:
     if not path.exists():
-        return None
+        return {}
     try:
-        data = json.loads(path.read_text())
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+
+
+def _write_raw(data: dict, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+
+
+def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AccountConfig | None:
+    data = _read_raw(path)
+    try:
         return AccountConfig(host=data["host"], username=data["username"])
-    except (json.JSONDecodeError, KeyError):
+    except KeyError:
         return None
 
 
 def save_config(cfg: AccountConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(asdict(cfg)))
+    data = _read_raw(path)
+    data.update(asdict(cfg))
+    _write_raw(data, path)
+
+
+def load_device_selection(path: Path = DEFAULT_CONFIG_PATH) -> tuple[str | None, str | None]:
+    data = _read_raw(path)
+    return data.get("capture_device"), data.get("playback_device")
+
+
+def save_device_selection(
+    capture_device: str | None,
+    playback_device: str | None,
+    path: Path = DEFAULT_CONFIG_PATH,
+) -> None:
+    data = _read_raw(path)
+    data["capture_device"] = capture_device
+    data["playback_device"] = playback_device
+    _write_raw(data, path)
 
 
 def get_password(username: str) -> str | None:

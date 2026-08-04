@@ -58,11 +58,7 @@ class MainWindow(QMainWindow):
 
         self._populate_devices()
         self._connect_signals()
-
-        if self.capture_combo.count() > 0:
-            self._on_capture_changed(self.capture_combo.currentIndex())
-        if self.playback_combo.count() > 0:
-            self._on_playback_changed(self.playback_combo.currentIndex())
+        self._restore_device_selection()
 
     def _populate_devices(self) -> None:
         devices = self.sip_engine.list_devices()
@@ -70,6 +66,23 @@ class MainWindow(QMainWindow):
             self.capture_combo.addItem(device.name, device.id)
         for device in output_devices(devices):
             self.playback_combo.addItem(device.name, device.id)
+
+    def _restore_device_selection(self) -> None:
+        capture_name, playback_name = config.load_device_selection()
+
+        if capture_name is not None:
+            index = self.capture_combo.findText(capture_name)
+            if index >= 0:
+                self.capture_combo.setCurrentIndex(index)
+        if self.capture_combo.count() > 0:
+            self._on_capture_changed(self.capture_combo.currentIndex())
+
+        if playback_name is not None:
+            index = self.playback_combo.findText(playback_name)
+            if index >= 0:
+                self.playback_combo.setCurrentIndex(index)
+        if self.playback_combo.count() > 0:
+            self._on_playback_changed(self.playback_combo.currentIndex())
 
     def _connect_signals(self) -> None:
         self.call_button.clicked.connect(self._on_call_clicked)
@@ -131,7 +144,14 @@ class MainWindow(QMainWindow):
     def _on_capture_changed(self, index: int) -> None:
         if index >= 0:
             self.sip_engine.select_capture_device(self.capture_combo.itemData(index))
+            self._save_device_selection()
 
     def _on_playback_changed(self, index: int) -> None:
         if index >= 0:
             self.sip_engine.select_playback_device(self.playback_combo.itemData(index))
+            self._save_device_selection()
+
+    def _save_device_selection(self) -> None:
+        capture_name = self.capture_combo.currentText() or None
+        playback_name = self.playback_combo.currentText() or None
+        config.save_device_selection(capture_name, playback_name)

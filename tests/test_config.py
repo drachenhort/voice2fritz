@@ -4,6 +4,8 @@ from voice2fritz.config import (
     AccountConfig,
     load_config,
     save_config,
+    load_device_selection,
+    save_device_selection,
     get_password,
     set_password,
 )
@@ -44,6 +46,41 @@ def test_save_config_creates_parent_dirs(tmp_path):
 
     assert path.exists()
     assert json.loads(path.read_text()) == {"host": "fritz.box", "username": "user123"}
+
+
+def test_save_and_load_device_selection_round_trip(tmp_path):
+    path = tmp_path / "config.json"
+
+    save_device_selection("Astro A50: USB Audio #1 (hw:1,1)", "pulse", path)
+
+    assert load_device_selection(path) == ("Astro A50: USB Audio #1 (hw:1,1)", "pulse")
+
+
+def test_load_device_selection_missing_file_returns_none_pair(tmp_path):
+    path = tmp_path / "does-not-exist.json"
+    assert load_device_selection(path) == (None, None)
+
+
+def test_save_device_selection_preserves_existing_account(tmp_path):
+    path = tmp_path / "config.json"
+    cfg = AccountConfig(host="fritz.box", username="user123")
+    save_config(cfg, path)
+
+    save_device_selection("Astro A50", "pulse", path)
+
+    assert load_config(path) == cfg
+    assert load_device_selection(path) == ("Astro A50", "pulse")
+
+
+def test_save_config_preserves_existing_device_selection(tmp_path):
+    path = tmp_path / "config.json"
+    save_device_selection("Astro A50", "pulse", path)
+
+    cfg = AccountConfig(host="fritz.box", username="user123")
+    save_config(cfg, path)
+
+    assert load_config(path) == cfg
+    assert load_device_selection(path) == ("Astro A50", "pulse")
 
 
 def test_set_and_get_password_uses_keyring(monkeypatch):
