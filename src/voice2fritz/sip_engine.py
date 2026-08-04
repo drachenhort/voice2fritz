@@ -97,6 +97,17 @@ class SipEngine(QObject):
         prm.statusCode = pj.PJSIP_SC_DECLINE
         call.hangup(prm)
 
+    def get_remote_number(self, call) -> str:
+        remote_uri = call.getInfo().remoteUri
+        start = remote_uri.find("sip:")
+        if start == -1:
+            return ""
+        start += len("sip:")
+        end = remote_uri.find("@", start)
+        if end == -1:
+            return ""
+        return remote_uri[start:end]
+
     def send_dtmf(self, call: SipCall, digit: str) -> None:
         call.dialDtmf(digit)
 
