@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Added
+- Closing the main window now asks Quit / Minimize to Tray / Cancel,
+  instead of quitting outright.
+- System tray icon with a Show/Quit menu, so voice2fritz can keep
+  running (and receiving calls) in the background.
+- Answering an incoming call while minimized to the tray brings the
+  window back automatically; declining leaves it minimized.
+
 ## [0.4.0]
 
 ### Changed
