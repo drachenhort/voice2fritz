@@ -55,13 +55,13 @@ def populate_and_restore_devices(
     capture_combo: QComboBox,
     playback_combo: QComboBox,
 ) -> None:
+    capture_name, playback_name = config.load_device_selection()
+
     devices = sip_engine.list_devices()
     for device in input_devices(devices):
         capture_combo.addItem(device.name, device.id)
     for device in output_devices(devices):
         playback_combo.addItem(device.name, device.id)
-
-    capture_name, playback_name = config.load_device_selection()
 
     if capture_name is not None:
         index = capture_combo.findText(capture_name)

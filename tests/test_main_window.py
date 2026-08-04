@@ -219,6 +219,15 @@ def test_digit_buttons_get_dtmf_mode_property_during_active_call(qtbot):
     assert window.digit_buttons["1"].property("dtmfMode") is False
 
 
+def test_initial_led_state_is_red(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert "#a83b2f" in window.sip_status_led.styleSheet()
+    assert window.sip_status_led.toolTip() == "Not registered"
+
+
 def test_registration_success_shows_green_led(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)

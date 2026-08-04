@@ -21,6 +21,11 @@ class SettingsDialog(QDialog):
         self.google_priority_checkbox = QCheckBox("Google sync overwrites local contacts with the same name")
         self.google_priority_checkbox.setChecked(config.load_google_sync_overwrites_local())
 
+        existing_account = config.load_config()
+        if existing_account is not None:
+            self.host_edit.setText(existing_account.host)
+            self.username_edit.setText(existing_account.username)
+
         self.capture_combo = QComboBox()
         self.speaker_combo = QComboBox()
 
@@ -37,10 +42,11 @@ class SettingsDialog(QDialog):
         layout.addWidget(self.save_button)
 
         self.save_button.clicked.connect(self._on_save)
-        self.capture_combo.currentIndexChanged.connect(self._on_capture_changed)
-        self.speaker_combo.currentIndexChanged.connect(self._on_playback_changed)
 
         populate_and_restore_devices(self.sip_engine, self.capture_combo, self.speaker_combo)
+
+        self.capture_combo.currentIndexChanged.connect(self._on_capture_changed)
+        self.speaker_combo.currentIndexChanged.connect(self._on_playback_changed)
 
     def _on_save(self) -> None:
         cfg = config.AccountConfig(

@@ -146,3 +146,58 @@ def test_device_selection_change_persists_choice(qtbot, monkeypatch):
     dialog.capture_combo.setCurrentIndex(1)
 
     assert saved == [("Headset", "Headset")]
+
+
+def test_opening_dialog_does_not_overwrite_saved_device_selection(qtbot, monkeypatch):
+    # Stateful fake: unlike the constant-lambda fakes used elsewhere in this file,
+    # this one actually reflects what gets saved during construction - so it can
+    # catch a regression where signal-driven saves fire before the real saved
+    # value has been read and restored.
+    store = {"capture": "Headset", "playback": "Headset"}
+
+    def fake_load(path=config.DEFAULT_CONFIG_PATH):
+        return (store["capture"], store["playback"])
+
+    def fake_save(capture, playback, path=config.DEFAULT_CONFIG_PATH):
+        store["capture"] = capture
+        store["playback"] = playback
+
+    monkeypatch.setattr(config, "load_device_selection", fake_load)
+    monkeypatch.setattr(config, "save_device_selection", fake_save)
+
+    devices = [
+        AudioDevice(id=0, name="Built-in Mic", has_input=True, has_output=True),
+        AudioDevice(id=1, name="Headset", has_input=True, has_output=True),
+    ]
+    engine = _FakeSipEngine(devices)
+
+    dialog = SettingsDialog(engine)
+    qtbot.addWidget(dialog)
+
+    assert store == {"capture": "Headset", "playback": "Headset"}
+    assert engine.selected_capture == 1
+    assert engine.selected_playback == 1
+
+
+def test_host_and_username_prefilled_from_existing_account(qtbot, monkeypatch):
+    monkeypatch.setattr(
+        config,
+        "load_config",
+        lambda path=config.DEFAULT_CONFIG_PATH: config.AccountConfig(host="fritz.box", username="user123"),
+    )
+
+    dialog = SettingsDialog(_FakeSipEngine())
+    qtbot.addWidget(dialog)
+
+    assert dialog.host_edit.text() == "fritz.box"
+    assert dialog.username_edit.text() == "user123"
+
+
+def test_host_and_username_stay_empty_when_no_existing_account(qtbot, monkeypatch):
+    monkeypatch.setattr(config, "load_config", lambda path=config.DEFAULT_CONFIG_PATH: None)
+
+    dialog = SettingsDialog(_FakeSipEngine())
+    qtbot.addWidget(dialog)
+
+    assert dialog.host_edit.text() == ""
+    assert dialog.username_edit.text() == ""
