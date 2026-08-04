@@ -236,6 +236,7 @@ class MainWindow(QMainWindow):
         choice = self._show_close_dialog()
         if choice == "quit":
             event.accept()
+            QApplication.instance().quit()
         elif choice == "tray":
             event.ignore()
             self.hide()

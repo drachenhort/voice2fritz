@@ -582,6 +582,23 @@ def test_close_event_quit_accepts_the_close(qtbot, monkeypatch):
     assert event.isAccepted()
 
 
+def test_close_event_quit_explicitly_quits_the_app(qtbot, monkeypatch):
+    from PySide6.QtGui import QCloseEvent
+    from PySide6.QtWidgets import QApplication
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    monkeypatch.setattr(window, "_show_close_dialog", lambda: "quit")
+
+    quit_calls = []
+    monkeypatch.setattr(QApplication.instance(), "quit", lambda: quit_calls.append(True))
+
+    window.closeEvent(QCloseEvent())
+
+    assert quit_calls == [True]
+
+
 def test_close_event_tray_ignores_close_and_hides_window(qtbot, monkeypatch):
     from PySide6.QtGui import QCloseEvent
 

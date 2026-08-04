@@ -17,6 +17,7 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setStyleSheet(theme.DARK_STYLESHEET)
     app.setWindowIcon(QIcon(str(ICON_PATH)))
+    app.setQuitOnLastWindowClosed(False)
 
     sip_engine = SipEngine()
     sip_engine.start()
