@@ -52,6 +52,12 @@ QPushButton#dialpadButton {
     font-size: 22px;
 }
 
+QPushButton#navButton {
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px;
+}
+
 QPushButton#addButton {
     background-color: #2fa84f;
     color: #ffffff;
