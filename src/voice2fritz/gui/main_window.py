@@ -128,13 +128,30 @@ class MainWindow(QMainWindow):
         self.sip_engine.incomingCall.connect(self._on_incoming_call)
         self.settings_button.clicked.connect(self._on_settings_clicked)
 
+    def keyPressEvent(self, event) -> None:
+        text = event.text()
+        if text in self.digit_buttons:
+            self._on_digit_clicked(text)
+        else:
+            super().keyPressEvent(event)
+
     def _on_digit_clicked(self, digit: str) -> None:
-        self.number_edit.setText(self.number_edit.text() + digit)
+        if self._active_call is not None:
+            self.sip_engine.send_dtmf(self._active_call, digit)
+        else:
+            self.number_edit.setText(self.number_edit.text() + digit)
+
+    def _set_dtmf_mode(self, enabled: bool) -> None:
+        for button in self.digit_buttons.values():
+            button.setProperty("dtmfMode", enabled)
+            button.style().unpolish(button)
+            button.style().polish(button)
 
     def _on_call_clicked(self) -> None:
         self._active_call = self.sip_engine.make_call(self.number_edit.text())
         self.hangup_button.setEnabled(True)
         self.mute_button.setEnabled(True)
+        self._set_dtmf_mode(True)
 
     def _on_hangup_clicked(self) -> None:
         if self._active_call is not None:
@@ -150,6 +167,7 @@ class MainWindow(QMainWindow):
         self.hangup_button.setEnabled(False)
         self.mute_button.setEnabled(False)
         self.mute_button.setChecked(False)
+        self._set_dtmf_mode(False)
 
     def _on_incoming_call(self, call) -> None:
         self._active_call = call
@@ -163,6 +181,7 @@ class MainWindow(QMainWindow):
             self.sip_engine.answer(self._active_call)
             self.hangup_button.setEnabled(True)
             self.mute_button.setEnabled(True)
+            self._set_dtmf_mode(True)
         else:
             self.sip_engine.hangup(self._active_call)
             self._on_call_ended()

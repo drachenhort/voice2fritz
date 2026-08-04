@@ -43,6 +43,10 @@ QPushButton:checked {
     background-color: #a83b2f;
 }
 
+QPushButton[dtmfMode="true"] {
+    border: 2px solid #4a9eff;
+}
+
 QLabel {
     color: #dddddd;
 }

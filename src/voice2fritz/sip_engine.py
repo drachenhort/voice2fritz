@@ -97,6 +97,9 @@ class SipEngine(QObject):
         prm.statusCode = pj.PJSIP_SC_DECLINE
         call.hangup(prm)
 
+    def send_dtmf(self, call: SipCall, digit: str) -> None:
+        call.dialDtmf(digit)
+
     def set_mute(self, call: SipCall, muted: bool) -> None:
         info = call.getInfo()
         for media_info in info.media:

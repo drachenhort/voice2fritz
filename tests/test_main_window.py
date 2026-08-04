@@ -28,6 +28,7 @@ class FakeSipEngine(QObject):
         self.registrations = []
         self.selected_capture = None
         self.selected_playback = None
+        self.dtmf_sent = []
 
     def make_call(self, number):
         self.calls_made.append(number)
@@ -44,6 +45,9 @@ class FakeSipEngine(QObject):
 
     def register(self, host, username, password):
         self.registrations.append((host, username, password))
+
+    def send_dtmf(self, call, digit):
+        self.dtmf_sent.append((call, digit))
 
     def list_devices(self):
         return [
@@ -127,6 +131,81 @@ def test_dialpad_button_appends_to_existing_text(qtbot):
     window.digit_buttons["5"].click()
 
     assert window.number_edit.text() == "0305"
+
+
+def test_keyboard_digit_appends_to_number_field(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    qtbot.keyClick(window, "1")
+    qtbot.keyClick(window, "2")
+    qtbot.keyClick(window, "*")
+
+    assert window.number_edit.text() == "12*"
+
+
+def test_keyboard_digit_sends_dtmf_during_active_call(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("01234567")
+    window.call_button.click()
+    active_call = window._active_call
+
+    qtbot.keyClick(window, "7")
+
+    assert engine.dtmf_sent == [(active_call, "7")]
+
+
+def test_dialpad_button_sends_dtmf_during_active_call(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("01234567")
+    window.call_button.click()
+    active_call = window._active_call
+    window.number_edit.clear()
+
+    window.digit_buttons["5"].click()
+
+    assert engine.dtmf_sent == [(active_call, "5")]
+    assert window.number_edit.text() == ""
+
+
+def test_dialpad_button_appends_to_field_after_call_ends(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("01234567")
+    window.call_button.click()
+    window.hangup_button.click()
+    window.number_edit.clear()
+
+    window.digit_buttons["9"].click()
+
+    assert engine.dtmf_sent == []
+    assert window.number_edit.text() == "9"
+
+
+def test_digit_buttons_get_dtmf_mode_property_during_active_call(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.digit_buttons["1"].property("dtmfMode") in (None, False)
+
+    window.number_edit.setText("01234567")
+    window.call_button.click()
+
+    assert window.digit_buttons["1"].property("dtmfMode") is True
+
+    window.hangup_button.click()
+
+    assert window.digit_buttons["1"].property("dtmfMode") is False
 
 
 def test_registration_state_updates_status_label(qtbot):
