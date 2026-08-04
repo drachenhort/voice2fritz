@@ -42,8 +42,9 @@ def _get_credentials() -> Credentials:
     return creds
 
 
-def _fetch_google_contacts(service) -> dict[str, list[str]]:
-    grouped: dict[str, list[str]] = {}
+def _fetch_google_contacts(service) -> dict[str, list[tuple[str, str]]]:
+    grouped: dict[str, list[tuple[str, str]]] = {}
+    seen_numbers_by_name: dict[str, set[str]] = {}
     page_token = None
 
     while True:
@@ -65,13 +66,16 @@ def _fetch_google_contacts(service) -> dict[str, list[str]]:
             if not names or not phone_numbers:
                 continue
             name = names[0].get("displayName", "")
-            numbers = list(dict.fromkeys(
-                pn.get("canonicalForm") or pn["value"]
-                for pn in phone_numbers
-                if pn.get("value")
-            ))
-            if name and numbers:
-                grouped.setdefault(name, []).extend(numbers)
+            if not name:
+                continue
+
+            seen = seen_numbers_by_name.setdefault(name, set())
+            for pn in phone_numbers:
+                value = pn.get("canonicalForm") or pn.get("value")
+                if not value or value in seen:
+                    continue
+                seen.add(value)
+                grouped.setdefault(name, []).append((value, pn.get("type", "")))
 
         page_token = response.get("nextPageToken")
         if not page_token:
@@ -81,7 +85,7 @@ def _fetch_google_contacts(service) -> dict[str, list[str]]:
 
 
 def _sync_from_grouped(
-    grouped: dict[str, list[str]],
+    grouped: dict[str, list[tuple[str, str]]],
     overwrite_local: bool,
     path: Path = contacts.DEFAULT_CONTACTS_PATH,
 ) -> int:

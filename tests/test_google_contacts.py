@@ -29,14 +29,14 @@ class _FakeService:
 def test_fetch_google_contacts_paginates_and_groups_by_name():
     page0 = {
         "connections": [
-            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917612345678"}]},
+            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917612345678", "type": "mobile"}]},
         ],
         "nextPageToken": "tok1",
     }
     page1 = {
         "connections": [
-            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917698765432"}]},
-            {"names": [{"displayName": "Ben Weber"}], "phoneNumbers": [{"value": "+4930123456"}]},
+            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917698765432", "type": "home"}]},
+            {"names": [{"displayName": "Ben Weber"}], "phoneNumbers": [{"value": "+4930123456", "type": "work"}]},
         ],
     }
     service = _FakeService({None: page0, "tok1": page1})
@@ -44,8 +44,8 @@ def test_fetch_google_contacts_paginates_and_groups_by_name():
     result = _fetch_google_contacts(service)
 
     assert result == {
-        "Anna Schmidt": ["+4917612345678", "+4917698765432"],
-        "Ben Weber": ["+4930123456"],
+        "Anna Schmidt": [("+4917612345678", "mobile"), ("+4917698765432", "home")],
+        "Ben Weber": [("+4930123456", "work")],
     }
 
 
@@ -67,15 +67,27 @@ def test_fetch_google_contacts_dedups_duplicate_numbers():
             {
                 "names": [{"displayName": "Anna Schmidt"}],
                 "phoneNumbers": [
-                    {"value": "+4917612345678"},
-                    {"value": "+4917612345678"},
+                    {"value": "+4917612345678", "type": "mobile"},
+                    {"value": "+4917612345678", "type": "main"},
                 ],
             },
         ],
     }
     service = _FakeService({None: page0})
 
-    assert _fetch_google_contacts(service) == {"Anna Schmidt": ["+4917612345678"]}
+    assert _fetch_google_contacts(service) == {"Anna Schmidt": [("+4917612345678", "mobile")]}
+
+
+def test_fetch_google_contacts_dedups_across_multiple_person_entries_for_same_name():
+    page0 = {
+        "connections": [
+            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917612345678", "type": "mobile"}]},
+            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917612345678", "type": "mobile"}]},
+        ],
+    }
+    service = _FakeService({None: page0})
+
+    assert _fetch_google_contacts(service) == {"Anna Schmidt": [("+4917612345678", "mobile")]}
 
 
 def test_fetch_google_contacts_prefers_canonical_form():
@@ -84,33 +96,44 @@ def test_fetch_google_contacts_prefers_canonical_form():
             {
                 "names": [{"displayName": "Anna Schmidt"}],
                 "phoneNumbers": [
-                    {"value": "0176 12345678", "canonicalForm": "+4917612345678"},
+                    {"value": "0176 12345678", "canonicalForm": "+4917612345678", "type": "mobile"},
                 ],
             },
         ],
     }
     service = _FakeService({None: page0})
 
-    assert _fetch_google_contacts(service) == {"Anna Schmidt": ["+4917612345678"]}
+    assert _fetch_google_contacts(service) == {"Anna Schmidt": [("+4917612345678", "mobile")]}
+
+
+def test_fetch_google_contacts_defaults_missing_type_to_empty_string():
+    page0 = {
+        "connections": [
+            {"names": [{"displayName": "Anna Schmidt"}], "phoneNumbers": [{"value": "+4917612345678"}]},
+        ],
+    }
+    service = _FakeService({None: page0})
+
+    assert _fetch_google_contacts(service) == {"Anna Schmidt": [("+4917612345678", "")]}
 
 
 def test_sync_from_grouped_adds_and_counts_changes(tmp_path):
     path = tmp_path / "contacts.json"
-    grouped = {"Anna Schmidt": ["+4917612345678"], "Ben Weber": ["+4930123456"]}
+    grouped = {"Anna Schmidt": [("+4917612345678", "mobile")], "Ben Weber": [("+4930123456", "work")]}
 
     count = _sync_from_grouped(grouped, overwrite_local=True, path=path)
 
     assert count == 2
     assert load_contacts(path) == [
-        Contact(name="Anna Schmidt", number="+4917612345678", source="google"),
-        Contact(name="Ben Weber", number="+4930123456", source="google"),
+        Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile"),
+        Contact(name="Ben Weber", number="+4930123456", source="google", number_type="work"),
     ]
 
 
 def test_sync_from_grouped_skips_local_wins_names(tmp_path):
     path = tmp_path / "contacts.json"
     save_contacts([Contact(name="Anna Schmidt", number="+4917600000000", source="local")], path)
-    grouped = {"Anna Schmidt": ["+4917612345678"]}
+    grouped = {"Anna Schmidt": [("+4917612345678", "mobile")]}
 
     count = _sync_from_grouped(grouped, overwrite_local=False, path=path)
 

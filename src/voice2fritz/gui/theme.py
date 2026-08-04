@@ -91,4 +91,31 @@ QListWidget::item:selected {
     background-color: #2a4d6e;
     color: #ffffff;
 }
+
+QTableWidget {
+    background-color: #12141a;
+    border: 1px solid #333333;
+    border-radius: 4px;
+    gridline-color: #262a33;
+    outline: none;
+}
+
+QTableWidget::item {
+    padding: 6px;
+}
+
+QTableWidget::item:selected {
+    background-color: #2a4d6e;
+    color: #ffffff;
+}
+
+QHeaderView::section {
+    background-color: #1c1e26;
+    color: #8a8f98;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid #333333;
+    font-size: 11px;
+    text-transform: uppercase;
+}
 """

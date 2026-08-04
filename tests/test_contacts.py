@@ -1,3 +1,5 @@
+import json
+
 from voice2fritz.contacts import (
     Contact,
     add_contact,
@@ -33,7 +35,7 @@ def test_add_contact_appends_and_persists(tmp_path):
     path = tmp_path / "contacts.json"
     save_contacts([Contact(name="Anna Schmidt", number="+4917612345678")], path)
 
-    add_contact("Ben Weber", "+4930123456", path)
+    add_contact("Ben Weber", "+4930123456", path=path)
 
     assert load_contacts(path) == [
         Contact(name="Anna Schmidt", number="+4917612345678"),
@@ -44,10 +46,18 @@ def test_add_contact_appends_and_persists(tmp_path):
 def test_add_contact_creates_parent_dirs(tmp_path):
     path = tmp_path / "nested" / "dir" / "contacts.json"
 
-    add_contact("Anna Schmidt", "+4917612345678", path)
+    add_contact("Anna Schmidt", "+4917612345678", path=path)
 
     assert path.exists()
     assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678")]
+
+
+def test_add_contact_stores_number_type(tmp_path):
+    path = tmp_path / "contacts.json"
+
+    add_contact("Anna Schmidt", "+4917612345678", number_type="mobile", path=path)
+
+    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678", number_type="mobile")]
 
 
 def test_delete_contact_removes_by_index(tmp_path):
@@ -93,48 +103,59 @@ def test_delete_contact_by_value_unknown_contact_is_noop(tmp_path):
 
 
 def test_load_contacts_defaults_missing_source_to_local(tmp_path):
-    import json
-
     path = tmp_path / "contacts.json"
     path.write_text(json.dumps([{"name": "Anna Schmidt", "number": "+4917612345678"}]))
 
     assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678", source="local")]
 
 
+def test_load_contacts_defaults_missing_number_type_to_empty(tmp_path):
+    path = tmp_path / "contacts.json"
+    path.write_text(json.dumps([{"name": "Anna Schmidt", "number": "+4917612345678"}]))
+
+    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678", number_type="")]
+
+
 def test_sync_contact_for_name_adds_new_google_contact(tmp_path):
     path = tmp_path / "contacts.json"
 
-    changed = sync_contact_for_name("Anna Schmidt", ["+4917612345678"], overwrite_local=True, path=path)
+    changed = sync_contact_for_name("Anna Schmidt", [("+4917612345678", "mobile")], overwrite_local=True, path=path)
 
     assert changed is True
-    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678", source="google")]
+    assert load_contacts(path) == [
+        Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile")
+    ]
 
 
 def test_sync_contact_for_name_replaces_changed_google_numbers(tmp_path):
     path = tmp_path / "contacts.json"
-    save_contacts([Contact(name="Anna Schmidt", number="+4917612345678", source="google")], path)
+    save_contacts([Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile")], path)
 
-    changed = sync_contact_for_name("Anna Schmidt", ["+4917699999999"], overwrite_local=True, path=path)
+    changed = sync_contact_for_name("Anna Schmidt", [("+4917699999999", "home")], overwrite_local=True, path=path)
 
     assert changed is True
-    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917699999999", source="google")]
+    assert load_contacts(path) == [
+        Contact(name="Anna Schmidt", number="+4917699999999", source="google", number_type="home")
+    ]
 
 
 def test_sync_contact_for_name_noop_when_unchanged(tmp_path):
     path = tmp_path / "contacts.json"
-    save_contacts([Contact(name="Anna Schmidt", number="+4917612345678", source="google")], path)
+    save_contacts([Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile")], path)
 
-    changed = sync_contact_for_name("Anna Schmidt", ["+4917612345678"], overwrite_local=True, path=path)
+    changed = sync_contact_for_name("Anna Schmidt", [("+4917612345678", "mobile")], overwrite_local=True, path=path)
 
     assert changed is False
-    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678", source="google")]
+    assert load_contacts(path) == [
+        Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile")
+    ]
 
 
 def test_sync_contact_for_name_local_wins_skips_entirely(tmp_path):
     path = tmp_path / "contacts.json"
     save_contacts([Contact(name="Anna Schmidt", number="+4917600000000", source="local")], path)
 
-    changed = sync_contact_for_name("Anna Schmidt", ["+4917612345678"], overwrite_local=False, path=path)
+    changed = sync_contact_for_name("Anna Schmidt", [("+4917612345678", "mobile")], overwrite_local=False, path=path)
 
     assert changed is False
     assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917600000000", source="local")]
@@ -144,22 +165,41 @@ def test_sync_contact_for_name_google_wins_overwrites_local(tmp_path):
     path = tmp_path / "contacts.json"
     save_contacts([Contact(name="Anna Schmidt", number="+4917600000000", source="local")], path)
 
-    changed = sync_contact_for_name("Anna Schmidt", ["+4917612345678"], overwrite_local=True, path=path)
+    changed = sync_contact_for_name("Anna Schmidt", [("+4917612345678", "mobile")], overwrite_local=True, path=path)
 
     assert changed is True
-    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678", source="google")]
+    assert load_contacts(path) == [
+        Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile")
+    ]
+
+
+def test_sync_contact_for_name_detects_type_only_change(tmp_path):
+    path = tmp_path / "contacts.json"
+    save_contacts([Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="")], path)
+
+    changed = sync_contact_for_name("Anna Schmidt", [("+4917612345678", "mobile")], overwrite_local=True, path=path)
+
+    assert changed is True
+    assert load_contacts(path) == [
+        Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile")
+    ]
 
 
 def test_sync_contact_for_name_ignores_number_order_for_noop_check(tmp_path):
     path = tmp_path / "contacts.json"
     save_contacts(
         [
-            Contact(name="Anna Schmidt", number="+4917612345678", source="google"),
-            Contact(name="Anna Schmidt", number="+4917698765432", source="google"),
+            Contact(name="Anna Schmidt", number="+4917612345678", source="google", number_type="mobile"),
+            Contact(name="Anna Schmidt", number="+4917698765432", source="google", number_type="home"),
         ],
         path,
     )
 
-    changed = sync_contact_for_name("Anna Schmidt", ["+4917698765432", "+4917612345678"], overwrite_local=True, path=path)
+    changed = sync_contact_for_name(
+        "Anna Schmidt",
+        [("+4917698765432", "home"), ("+4917612345678", "mobile")],
+        overwrite_local=True,
+        path=path,
+    )
 
     assert changed is False

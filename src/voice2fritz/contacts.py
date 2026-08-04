@@ -10,6 +10,7 @@ class Contact:
     name: str
     number: str
     source: str = "local"
+    number_type: str = ""
 
 
 def load_contacts(path: Path = DEFAULT_CONTACTS_PATH) -> list[Contact]:
@@ -20,7 +21,12 @@ def load_contacts(path: Path = DEFAULT_CONTACTS_PATH) -> list[Contact]:
     except json.JSONDecodeError:
         return []
     return [
-        Contact(name=item["name"], number=item["number"], source=item.get("source", "local"))
+        Contact(
+            name=item["name"],
+            number=item["number"],
+            source=item.get("source", "local"),
+            number_type=item.get("number_type", ""),
+        )
         for item in data
     ]
 
@@ -30,9 +36,9 @@ def save_contacts(contacts: list[Contact], path: Path = DEFAULT_CONTACTS_PATH) -
     path.write_text(json.dumps([asdict(contact) for contact in contacts]))
 
 
-def add_contact(name: str, number: str, path: Path = DEFAULT_CONTACTS_PATH) -> None:
+def add_contact(name: str, number: str, number_type: str = "", path: Path = DEFAULT_CONTACTS_PATH) -> None:
     contacts = load_contacts(path)
-    contacts.append(Contact(name=name, number=number))
+    contacts.append(Contact(name=name, number=number, number_type=number_type))
     save_contacts(contacts, path)
 
 
@@ -54,7 +60,7 @@ def delete_contact_by_value(contact: Contact, path: Path = DEFAULT_CONTACTS_PATH
 
 def sync_contact_for_name(
     name: str,
-    numbers: list[str],
+    numbers: list[tuple[str, str]],
     overwrite_local: bool,
     path: Path = DEFAULT_CONTACTS_PATH,
 ) -> bool:
@@ -64,12 +70,18 @@ def sync_contact_for_name(
     if has_local and not overwrite_local:
         return False
 
-    existing_google_numbers = {c.number for c in all_contacts if c.name == name and c.source == "google"}
+    existing_google_entries = {
+        (c.number, c.number_type) for c in all_contacts if c.name == name and c.source == "google"
+    }
+    new_entries = set(numbers)
 
-    if not has_local and existing_google_numbers == set(numbers):
+    if not has_local and existing_google_entries == new_entries:
         return False
 
     remaining = [c for c in all_contacts if c.name != name]
-    remaining.extend(Contact(name=name, number=number, source="google") for number in numbers)
+    remaining.extend(
+        Contact(name=name, number=number, source="google", number_type=number_type)
+        for number, number_type in numbers
+    )
     save_contacts(remaining, path)
     return True
