@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from voice2fritz import call_log, config, contacts
 from voice2fritz.audio import input_devices, output_devices
+from voice2fritz.gui.call_log_dialog import CallLogDialog
 from voice2fritz.gui.contacts_dialog import ContactsDialog
 from voice2fritz.gui.settings_dialog import SettingsDialog
 
@@ -65,6 +66,7 @@ class MainWindow(QMainWindow):
         self.settings_button = QPushButton("⚙")
         self.settings_button.setToolTip("Settings")
         self.contacts_button = QPushButton("Contacts")
+        self.log_button = QPushButton("Log")
 
         controls_column = QVBoxLayout()
         controls_column.addWidget(self.call_button)
@@ -72,6 +74,7 @@ class MainWindow(QMainWindow):
         controls_column.addWidget(self.mute_button)
         controls_column.addWidget(self.settings_button)
         controls_column.addWidget(self.contacts_button)
+        controls_column.addWidget(self.log_button)
 
         top_row = QHBoxLayout()
         top_row.addLayout(dialpad_column)
@@ -136,6 +139,7 @@ class MainWindow(QMainWindow):
         self.sip_engine.incomingCall.connect(self._on_incoming_call)
         self.settings_button.clicked.connect(self._on_settings_clicked)
         self.contacts_button.clicked.connect(self._on_contacts_clicked)
+        self.log_button.clicked.connect(self._on_log_clicked)
 
     def keyPressEvent(self, event) -> None:
         text = event.text()
@@ -235,6 +239,11 @@ class MainWindow(QMainWindow):
     def _on_contacts_clicked(self) -> None:
         dialog = ContactsDialog(self)
         dialog.contactSelected.connect(self.number_edit.setText)
+        dialog.exec()
+
+    def _on_log_clicked(self) -> None:
+        dialog = CallLogDialog(self)
+        dialog.callSelected.connect(self.number_edit.setText)
         dialog.exec()
 
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:

@@ -423,3 +423,31 @@ def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):
     window.hangup_button.click()
 
     assert logged[0].name == "Anna Schmidt"
+
+
+def test_log_button_opens_dialog_and_fills_number_on_selection(qtbot, monkeypatch):
+    from PySide6.QtCore import QObject, Signal
+
+    class FakeCallLogDialogQt(QObject):
+        callSelected = Signal(str)
+
+        def __init__(self, parent=None):
+            super().__init__()
+            FakeCallLogDialogQt.last_instance = self
+
+        def exec(self):
+            return None
+
+    monkeypatch.setattr("voice2fritz.gui.main_window.CallLogDialog", FakeCallLogDialogQt)
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.log_button.click()
+
+    assert FakeCallLogDialogQt.last_instance is not None
+
+    FakeCallLogDialogQt.last_instance.callSelected.emit("+4917612345678")
+
+    assert window.number_edit.text() == "+4917612345678"
