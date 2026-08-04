@@ -553,6 +553,15 @@ def test_log_dock_is_fixed_in_place(qtbot):
     assert window.log_dock.features() == QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
 
 
+def test_docks_have_fixed_width_so_dialpad_cannot_be_resized(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.call_details_dock.minimumWidth() == window.call_details_dock.maximumWidth()
+    assert window.log_dock.minimumWidth() == window.log_dock.maximumWidth()
+
+
 def test_t9_letters_match_mapping(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
