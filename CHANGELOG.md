@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Changed
+- Dialpad buttons made more rectangular with tighter, more phone-like
+  spacing: near-zero gaps between digits, a small 2px horizontal gap for
+  separation, T9 letters sitting flush under their button instead of
+  floating with a gap below it.
+
+### Fixed
+- Dialpad grid cells were absorbing leftover vertical space in the window
+  and stretching, which pushed the vertically-centered T9 letters away
+  from their button even with zero layout spacing. Cells are now pinned
+  to a fixed size so they can't be stretched.
+
 ## [0.3.0]
 
 ### Added
