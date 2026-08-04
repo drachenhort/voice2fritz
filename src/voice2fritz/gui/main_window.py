@@ -299,7 +299,7 @@ class MainWindow(QMainWindow):
     def _on_incoming_call_declined(self) -> None:
         self._close_incoming_popup()
         self._call_direction = "missed"
-        self.sip_engine.hangup(self._active_call)
+        self.sip_engine.decline(self._active_call)
         self._on_call_ended()
 
     def _close_incoming_popup(self) -> None:

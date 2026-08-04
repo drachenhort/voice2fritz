@@ -97,6 +97,11 @@ class SipEngine(QObject):
         prm.statusCode = pj.PJSIP_SC_DECLINE
         call.hangup(prm)
 
+    def decline(self, call: SipCall) -> None:
+        prm = pj.CallOpParam()
+        prm.statusCode = pj.PJSIP_SC_DECLINE
+        call.answer(prm)
+
     def get_remote_number(self, call) -> str:
         remote_uri = call.getInfo().remoteUri
         start = remote_uri.find("sip:")

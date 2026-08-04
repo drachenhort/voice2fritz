@@ -38,6 +38,7 @@ class FakeSipEngine(QObject):
         super().__init__()
         self.calls_made = []
         self.hangups = []
+        self.declines = []
         self.mutes = []
         self.answers = []
         self.registrations = []
@@ -52,6 +53,9 @@ class FakeSipEngine(QObject):
 
     def hangup(self, call):
         self.hangups.append(call)
+
+    def decline(self, call):
+        self.declines.append(call)
 
     def set_mute(self, call, muted):
         self.mutes.append((call, muted))
@@ -284,7 +288,7 @@ def test_incoming_call_reject_hangs_up_and_resets_state(qtbot):
     engine.incomingCall.emit(incoming_call)
     window.incoming_popup.declined.emit()
 
-    assert engine.hangups == [incoming_call]
+    assert engine.declines == [incoming_call]
     assert window._active_call is None
     assert not window.hangup_button.isEnabled()
     assert not window.call_details.mute_button.isEnabled()
