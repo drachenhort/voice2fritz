@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QSizePolicy,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -72,6 +73,7 @@ class MainWindow(QMainWindow):
                 letters_label = QLabel(_T9_LETTERS[digit])
                 letters_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 letters_label.setStyleSheet("color: #8a8f98; font-size: 11px;")
+                letters_label.setFixedHeight(14)
 
                 cell = QVBoxLayout()
                 cell.setSpacing(0)
@@ -80,6 +82,7 @@ class MainWindow(QMainWindow):
                 cell.addWidget(letters_label)
                 cell_widget = QWidget()
                 cell_widget.setLayout(cell)
+                cell_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
                 dialpad_grid.addWidget(cell_widget, row, col)
                 self.digit_buttons[digit] = button
