@@ -32,7 +32,7 @@ class SipAccount(pj.Account):
 
     def onRegState(self, prm):
         info = self.getInfo()
-        self.engine.registrationStateChanged.emit(info.regStatusText)
+        self.engine.registrationStateChanged.emit(f"{info.regStatus} {info.regStatusText}")
 
     def onIncomingCall(self, prm):
         call = SipCall(self.engine, self, call_id=prm.callId)
