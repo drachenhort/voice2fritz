@@ -298,6 +298,34 @@ def test_device_selection_change_persists_choice(qtbot, monkeypatch):
     assert saved == [("Headset", "Headset")]
 
 
+def test_contacts_button_opens_dialog_and_fills_number_on_selection(qtbot, monkeypatch):
+    from PySide6.QtCore import QObject, Signal
+
+    class FakeContactsDialogQt(QObject):
+        contactSelected = Signal(str)
+
+        def __init__(self, parent=None):
+            super().__init__()
+            FakeContactsDialogQt.last_instance = self
+
+        def exec(self):
+            return None
+
+    monkeypatch.setattr("voice2fritz.gui.main_window.ContactsDialog", FakeContactsDialogQt)
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.contacts_button.click()
+
+    assert FakeContactsDialogQt.last_instance is not None
+
+    FakeContactsDialogQt.last_instance.contactSelected.emit("+4917612345678")
+
+    assert window.number_edit.text() == "+4917612345678"
+
+
 def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
     engine = FakeSipEngine()
     window = MainWindow(engine)
