@@ -489,6 +489,59 @@ def test_log_dock_holds_a_tab_widget_with_log_and_contacts(qtbot):
     assert window.log_tabs.indexOf(window.contacts_panel) >= 0
 
 
+def test_tray_icon_created_with_show_and_quit_actions(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.tray_icon is not None
+    menu_actions = window.tray_icon.contextMenu().actions()
+    assert window._show_window_action in menu_actions
+    assert window._quit_action in menu_actions
+
+
+def test_tray_show_action_shows_and_raises_window(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.hide()
+
+    window._show_window_action.trigger()
+
+    assert window.isVisible()
+
+
+def test_tray_activation_shows_window(qtbot):
+    from PySide6.QtWidgets import QSystemTrayIcon
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.hide()
+
+    window._on_tray_activated(QSystemTrayIcon.ActivationReason.Trigger)
+
+    assert window.isVisible()
+
+
+def test_tray_quit_action_quits_without_confirmation(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    called = []
+    monkeypatch.setattr(window, "_show_close_dialog", lambda: called.append(True))
+
+    quit_calls = []
+    from PySide6.QtWidgets import QApplication
+    monkeypatch.setattr(QApplication.instance(), "quit", lambda: quit_calls.append(True))
+
+    window._quit_action.trigger()
+
+    assert quit_calls == [True]
+    assert called == []
+
+
 def test_close_event_quit_accepts_the_close(qtbot, monkeypatch):
     from PySide6.QtGui import QCloseEvent
 

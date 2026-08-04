@@ -1,16 +1,20 @@
 from datetime import datetime
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
+    QApplication,
     QDockWidget,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSizePolicy,
+    QSystemTrayIcon,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -167,6 +171,20 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         restore_saved_devices(self.sip_engine)
 
+        self._show_window_action = QAction("Show voice2fritz", self)
+        self._show_window_action.triggered.connect(self._show_and_raise)
+        self._quit_action = QAction("Quit", self)
+        self._quit_action.triggered.connect(self._on_tray_quit)
+
+        tray_menu = QMenu(self)
+        tray_menu.addAction(self._show_window_action)
+        tray_menu.addAction(self._quit_action)
+
+        self.tray_icon = QSystemTrayIcon(self.windowIcon(), self)
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self._on_tray_activated)
+        self.tray_icon.show()
+
     def _connect_signals(self) -> None:
         self.call_button.clicked.connect(self._on_call_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
@@ -185,6 +203,18 @@ class MainWindow(QMainWindow):
             self._on_digit_clicked(text)
         else:
             super().keyPressEvent(event)
+
+    def _show_and_raise(self) -> None:
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _on_tray_activated(self, reason) -> None:
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self._show_and_raise()
+
+    def _on_tray_quit(self) -> None:
+        QApplication.instance().quit()
 
     def _show_close_dialog(self) -> str:
         box = QMessageBox(self)
