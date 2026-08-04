@@ -1,5 +1,7 @@
 import sys
+from pathlib import Path
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from voice2fritz import config
@@ -8,10 +10,13 @@ from voice2fritz.gui.main_window import MainWindow
 from voice2fritz.gui.settings_dialog import SettingsDialog
 from voice2fritz.sip_engine import SipEngine
 
+ICON_PATH = Path(__file__).parent / "gui" / "resources" / "icon.png"
+
 
 def main() -> None:
     app = QApplication(sys.argv)
     app.setStyleSheet(theme.DARK_STYLESHEET)
+    app.setWindowIcon(QIcon(str(ICON_PATH)))
 
     sip_engine = SipEngine()
     sip_engine.start()
