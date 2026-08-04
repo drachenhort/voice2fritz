@@ -18,14 +18,15 @@ def main() -> None:
     if account is None:
         dialog = SettingsDialog()
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
+            sip_engine.stop()
             sys.exit(0)
         account = config.load_config()
 
-    password = config.get_password(account.username) or ""
-    sip_engine.register(account.host, account.username, password)
-
     window = MainWindow(sip_engine)
     window.show()
+
+    password = config.get_password(account.username) or ""
+    sip_engine.register(account.host, account.username, password)
 
     exit_code = app.exec()
     sip_engine.stop()

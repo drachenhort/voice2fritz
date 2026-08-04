@@ -1,4 +1,5 @@
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QMessageBox
 
 from voice2fritz.audio import AudioDevice
 from voice2fritz.gui.main_window import MainWindow
@@ -15,6 +16,8 @@ class FakeSipEngine(QObject):
         self.calls_made = []
         self.hangups = []
         self.mutes = []
+        self.answers = []
+        self.registrations = []
         self.selected_capture = None
         self.selected_playback = None
 
@@ -29,7 +32,10 @@ class FakeSipEngine(QObject):
         self.mutes.append((call, muted))
 
     def answer(self, call):
-        pass
+        self.answers.append(call)
+
+    def register(self, host, username, password):
+        self.registrations.append((host, username, password))
 
     def list_devices(self):
         return [
@@ -86,9 +92,10 @@ def test_mute_button_toggles_engine_mute(qtbot):
 
     window.number_edit.setText("01234567")
     window.call_button.click()
+    active_call = window._active_call
     window.mute_button.click()
 
-    assert engine.mutes == [(engine.mutes[0][0], True)]
+    assert engine.mutes == [(active_call, True)]
 
 
 def test_registration_state_updates_status_label(qtbot):
@@ -109,3 +116,57 @@ def test_device_combo_selection_calls_engine(qtbot):
     window.capture_combo.setCurrentIndex(1)
 
     assert engine.selected_capture == 1
+
+
+def test_initial_device_selection_applied_at_startup(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert engine.selected_capture == window.capture_combo.itemData(0)
+    assert engine.selected_playback == window.playback_combo.itemData(0)
+
+
+def test_incoming_call_accept_answers_and_enables_controls(qtbot, monkeypatch):
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+
+    assert engine.answers == [incoming_call]
+    assert window._active_call is incoming_call
+    assert window.hangup_button.isEnabled()
+    assert window.mute_button.isEnabled()
+
+
+def test_incoming_call_reject_hangs_up_and_resets_state(qtbot, monkeypatch):
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.No)
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    incoming_call = object()
+    engine.incomingCall.emit(incoming_call)
+
+    assert engine.hangups == [incoming_call]
+    assert window._active_call is None
+    assert not window.hangup_button.isEnabled()
+    assert not window.mute_button.isEnabled()
+
+
+def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
+    from voice2fritz import config as config_module
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    monkeypatch.setattr(config_module, "get_password", lambda username: "secret")
+    cfg = config_module.AccountConfig(host="fritz.box", username="user123")
+
+    window._on_account_saved(cfg)
+
+    assert engine.registrations == [("fritz.box", "user123", "secret")]

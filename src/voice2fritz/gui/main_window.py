@@ -4,12 +4,15 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
+from voice2fritz import config
 from voice2fritz.audio import input_devices, output_devices
+from voice2fritz.gui.settings_dialog import SettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -29,12 +32,14 @@ class MainWindow(QMainWindow):
         self.capture_combo = QComboBox()
         self.playback_combo = QComboBox()
         self.status_label = QLabel("Not registered")
+        self.settings_button = QPushButton("Settings")
 
         call_row = QHBoxLayout()
         call_row.addWidget(self.number_edit)
         call_row.addWidget(self.call_button)
         call_row.addWidget(self.hangup_button)
         call_row.addWidget(self.mute_button)
+        call_row.addWidget(self.settings_button)
 
         device_row = QHBoxLayout()
         device_row.addWidget(QLabel("Mic:"))
@@ -54,6 +59,11 @@ class MainWindow(QMainWindow):
         self._populate_devices()
         self._connect_signals()
 
+        if self.capture_combo.count() > 0:
+            self._on_capture_changed(self.capture_combo.currentIndex())
+        if self.playback_combo.count() > 0:
+            self._on_playback_changed(self.playback_combo.currentIndex())
+
     def _populate_devices(self) -> None:
         devices = self.sip_engine.list_devices()
         for device in input_devices(devices):
@@ -70,6 +80,8 @@ class MainWindow(QMainWindow):
         self.sip_engine.registrationStateChanged.connect(self.status_label.setText)
         self.sip_engine.callStateChanged.connect(self.status_label.setText)
         self.sip_engine.callEnded.connect(self._on_call_ended)
+        self.sip_engine.incomingCall.connect(self._on_incoming_call)
+        self.settings_button.clicked.connect(self._on_settings_clicked)
 
     def _on_call_clicked(self) -> None:
         self._active_call = self.sip_engine.make_call(self.number_edit.text())
@@ -90,6 +102,31 @@ class MainWindow(QMainWindow):
         self.hangup_button.setEnabled(False)
         self.mute_button.setEnabled(False)
         self.mute_button.setChecked(False)
+
+    def _on_incoming_call(self, call) -> None:
+        self._active_call = call
+        answer = QMessageBox.question(
+            self,
+            "Incoming call",
+            "Incoming call. Answer?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.sip_engine.answer(self._active_call)
+            self.hangup_button.setEnabled(True)
+            self.mute_button.setEnabled(True)
+        else:
+            self.sip_engine.hangup(self._active_call)
+            self._on_call_ended()
+
+    def _on_settings_clicked(self) -> None:
+        dialog = SettingsDialog(self)
+        dialog.accountSaved.connect(self._on_account_saved)
+        dialog.exec()
+
+    def _on_account_saved(self, cfg: config.AccountConfig) -> None:
+        password = config.get_password(cfg.username) or ""
+        self.sip_engine.register(cfg.host, cfg.username, password)
 
     def _on_capture_changed(self, index: int) -> None:
         if index >= 0:

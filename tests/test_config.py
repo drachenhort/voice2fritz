@@ -1,7 +1,5 @@
 import json
 
-import pytest
-
 from voice2fritz.config import (
     AccountConfig,
     load_config,
@@ -23,6 +21,18 @@ def test_save_and_load_config_round_trip(tmp_path):
 
 def test_load_config_missing_file_returns_none(tmp_path):
     path = tmp_path / "does-not-exist.json"
+    assert load_config(path) is None
+
+
+def test_load_config_malformed_json_returns_none(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text("{not valid json")
+    assert load_config(path) is None
+
+
+def test_load_config_missing_keys_returns_none(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(json.dumps({"host": "fritz.box"}))
     assert load_config(path) is None
 
 

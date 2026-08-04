@@ -56,17 +56,19 @@ class SipEngine(QObject):
         self._ep.libCreate()
         self._ep.libInit(pj.EpConfig())
         transport_cfg = pj.TransportConfig()
-        transport_cfg.port = 5060
+        transport_cfg.port = 0
         self._ep.transportCreate(pj.PJSIP_TRANSPORT_UDP, transport_cfg)
         self._ep.libStart()
 
     def stop(self) -> None:
         if self._ep is not None:
+            self._account = None
             self._ep.libDestroy()
             self._ep = None
 
     def register(self, host: str, username: str, password: str) -> None:
-        assert self._ep is not None, "call start() first"
+        if self._ep is None:
+            raise RuntimeError("call start() first")
         self._host = host
         acc_cfg = pj.AccountConfig()
         acc_cfg.idUri = f"sip:{username}@{host}"
@@ -78,7 +80,8 @@ class SipEngine(QObject):
         self._account.create(acc_cfg)
 
     def make_call(self, number: str) -> SipCall:
-        assert self._account is not None, "call register() first"
+        if self._account is None:
+            raise RuntimeError("call register() first")
         call = SipCall(self, self._account)
         call_prm = pj.CallOpParam(True)
         call.makeCall(f"sip:{number}@{self._host}", call_prm)
@@ -102,14 +105,17 @@ class SipEngine(QObject):
                 audio_media.adjustTxLevel(0.0 if muted else 1.0)
 
     def list_devices(self) -> list[AudioDevice]:
-        assert self._ep is not None, "call start() first"
+        if self._ep is None:
+            raise RuntimeError("call start() first")
         raw_devices = self._ep.audDevManager().enumDev2()
         return list_audio_devices(raw_devices)
 
     def select_capture_device(self, device_id: int) -> None:
-        assert self._ep is not None, "call start() first"
+        if self._ep is None:
+            raise RuntimeError("call start() first")
         self._ep.audDevManager().setCaptureDev(device_id)
 
     def select_playback_device(self, device_id: int) -> None:
-        assert self._ep is not None, "call start() first"
+        if self._ep is None:
+            raise RuntimeError("call start() first")
         self._ep.audDevManager().setPlaybackDev(device_id)

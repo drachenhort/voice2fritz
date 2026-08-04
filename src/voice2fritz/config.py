@@ -17,8 +17,11 @@ class AccountConfig:
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AccountConfig | None:
     if not path.exists():
         return None
-    data = json.loads(path.read_text())
-    return AccountConfig(host=data["host"], username=data["username"])
+    try:
+        data = json.loads(path.read_text())
+        return AccountConfig(host=data["host"], username=data["username"])
+    except (json.JSONDecodeError, KeyError):
+        return None
 
 
 def save_config(cfg: AccountConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
