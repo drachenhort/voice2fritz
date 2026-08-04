@@ -545,6 +545,14 @@ def test_call_details_dock_is_not_closable(qtbot):
     assert not (window.call_details_dock.features() & QDockWidget.DockWidgetFeature.DockWidgetClosable)
 
 
+def test_log_dock_is_not_closable(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert not (window.log_dock.features() & QDockWidget.DockWidgetFeature.DockWidgetClosable)
+
+
 def test_t9_letters_match_mapping(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
