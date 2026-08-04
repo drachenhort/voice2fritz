@@ -82,3 +82,45 @@ def test_delete_button_removes_selected_contact(qtbot, monkeypatch):
     dialog.delete_button.click()
 
     assert deleted == [0]
+
+
+def test_sync_button_reloads_list_on_success(qtbot, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from voice2fritz.gui import contacts_dialog as contacts_dialog_module
+
+    monkeypatch.setattr(
+        contacts_module,
+        "load_contacts",
+        lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [contacts_module.Contact(name="Anna Schmidt", number="+4917612345678", source="google")],
+    )
+    monkeypatch.setattr(contacts_dialog_module.google_contacts, "sync_google_contacts", lambda: 1)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+    dialog = ContactsDialog()
+    qtbot.addWidget(dialog)
+
+    dialog.sync_button.click()
+
+    assert dialog.contact_list.count() == 1
+    assert dialog.contact_list.item(0).text() == "Anna Schmidt — +4917612345678"
+
+
+def test_sync_button_shows_warning_on_failure(qtbot, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+    from voice2fritz.gui import contacts_dialog as contacts_dialog_module
+
+    monkeypatch.setattr(contacts_module, "load_contacts", lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [])
+
+    def raise_error():
+        raise ValueError("auth failed")
+
+    monkeypatch.setattr(contacts_dialog_module.google_contacts, "sync_google_contacts", raise_error)
+    warnings = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a))
+
+    dialog = ContactsDialog()
+    qtbot.addWidget(dialog)
+
+    dialog.sync_button.click()
+
+    assert len(warnings) == 1

@@ -73,3 +73,22 @@ LD_LIBRARY_PATH=~/.local/lib/pjsip .venv/bin/python -m voice2fritz.main
 If you do have root and prefer a system-wide install instead:
 `sudo make install && sudo ldconfig` from the `pjproject` root — then
 `LD_LIBRARY_PATH` isn't needed.
+
+## Setting up Google Contacts sync (optional)
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/),
+   create a new project (or reuse one).
+2. Enable the **People API** for that project (APIs & Services → Library
+   → search "People API" → Enable).
+3. Go to APIs & Services → Credentials → Create Credentials → OAuth
+   client ID. Choose application type **Desktop app**.
+4. Download the resulting JSON file and save it as
+   `~/.config/voice2fritz/google_client_secret.json`.
+5. In voice2fritz, open Contacts → Sync Google. The first sync opens
+   your browser for Google's consent screen; approve it. A token is
+   saved to `~/.config/voice2fritz/google_token.json` so later syncs
+   don't need the browser again.
+
+Both files are local-only and never committed to source control — treat
+`google_token.json` like a password, since it holds a refresh token for
+your Google account.

@@ -75,3 +75,22 @@ LD_LIBRARY_PATH=~/.local/lib/pjsip .venv/bin/python -m voice2fritz.main
 Wer Root-Rechte hat und stattdessen eine systemweite Installation
 bevorzugt: `sudo make install && sudo ldconfig` im `pjproject`-Wurzelverzeichnis
 – dann ist `LD_LIBRARY_PATH` nicht nötig.
+
+## Google-Kontakte-Synchronisation einrichten (optional)
+
+1. In der [Google Cloud Console](https://console.cloud.google.com/) ein
+   neues Projekt anlegen (oder ein bestehendes verwenden).
+2. Für dieses Projekt die **People API** aktivieren (APIs & Dienste →
+   Bibliothek → "People API" suchen → Aktivieren).
+3. APIs & Dienste → Anmeldedaten → Anmeldedaten erstellen → OAuth-Client-ID.
+   Anwendungstyp **Desktop-App** wählen.
+4. Die heruntergeladene JSON-Datei unter
+   `~/.config/voice2fritz/google_client_secret.json` speichern.
+5. In voice2fritz: Kontakte → Sync Google öffnen. Beim ersten Sync öffnet
+   sich der Browser für die Google-Zustimmung; bestätigen. Ein Token wird
+   unter `~/.config/voice2fritz/google_token.json` gespeichert, damit
+   spätere Syncs ohne Browser auskommen.
+
+Beide Dateien bleiben lokal und werden nie ins Repository übernommen –
+`google_token.json` wie ein Passwort behandeln, da es ein Refresh-Token
+für den Google-Account enthält.

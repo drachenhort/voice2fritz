@@ -5,11 +5,13 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
 )
 
 from voice2fritz import contacts as contacts_module
+from voice2fritz import google_contacts
 
 
 class ContactsDialog(QDialog):
@@ -27,6 +29,7 @@ class ContactsDialog(QDialog):
         self.add_button = QPushButton("Add")
         self.delete_button = QPushButton("Delete")
         self.select_button = QPushButton("Select")
+        self.sync_button = QPushButton("Sync Google")
 
         add_row = QHBoxLayout()
         add_row.addWidget(self.name_edit)
@@ -36,6 +39,7 @@ class ContactsDialog(QDialog):
         button_row = QHBoxLayout()
         button_row.addWidget(self.delete_button)
         button_row.addWidget(self.select_button)
+        button_row.addWidget(self.sync_button)
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.contact_list)
@@ -46,6 +50,7 @@ class ContactsDialog(QDialog):
         self.add_button.clicked.connect(self._on_add_clicked)
         self.delete_button.clicked.connect(self._on_delete_clicked)
         self.select_button.clicked.connect(self._on_select_clicked)
+        self.sync_button.clicked.connect(self._on_sync_clicked)
 
         self._reload_list()
 
@@ -68,6 +73,15 @@ class ContactsDialog(QDialog):
         if row >= 0:
             contacts_module.delete_contact(row)
             self._reload_list()
+
+    def _on_sync_clicked(self) -> None:
+        try:
+            count = google_contacts.sync_google_contacts()
+        except Exception as exc:
+            QMessageBox.warning(self, "Contacts", f"Could not sync Google contacts: {exc}")
+            return
+        self._reload_list()
+        QMessageBox.information(self, "Contacts", f"{count} contact(s) added or updated.")
 
     def _on_item_activated(self, item: QListWidgetItem) -> None:
         self._select_row(self.contact_list.row(item))
