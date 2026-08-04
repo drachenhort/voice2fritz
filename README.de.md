@@ -7,6 +7,8 @@ anmeldet und Anrufe über ein Headset ermöglicht – eingehend wie
 ausgehend. Speziell für die FRITZ!Box gebaut – keine allgemeine
 Multi-Provider-SIP-Konfiguration, nur Host, Benutzername und Passwort.
 
+Getestet mit einer FRITZ!Box 7590.
+
 Siehe [CHANGELOG.md](CHANGELOG.md) für die Versionshistorie. Lizenziert
 unter der [MIT-Lizenz](LICENSE).
 
