@@ -1,5 +1,5 @@
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QDialog, QFormLayout, QLineEdit, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QCheckBox, QDialog, QFormLayout, QLineEdit, QPushButton, QVBoxLayout
 
 from voice2fritz import config
 
@@ -16,6 +16,8 @@ class SettingsDialog(QDialog):
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.save_button = QPushButton("Save")
+        self.google_priority_checkbox = QCheckBox("Google sync overwrites local contacts with the same name")
+        self.google_priority_checkbox.setChecked(True)
 
         form = QFormLayout()
         form.addRow("Host", self.host_edit)
@@ -24,6 +26,7 @@ class SettingsDialog(QDialog):
 
         layout = QVBoxLayout(self)
         layout.addLayout(form)
+        layout.addWidget(self.google_priority_checkbox)
         layout.addWidget(self.save_button)
 
         self.save_button.clicked.connect(self._on_save)
@@ -35,5 +38,6 @@ class SettingsDialog(QDialog):
         )
         config.save_config(cfg)
         config.set_password(cfg.username, self.password_edit.text())
+        config.save_google_sync_overwrites_local(self.google_priority_checkbox.isChecked())
         self.accountSaved.emit(cfg)
         self.accept()

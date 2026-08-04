@@ -58,6 +58,17 @@ def save_device_selection(
     _write_raw(data, path)
 
 
+def load_google_sync_overwrites_local(path: Path = DEFAULT_CONFIG_PATH) -> bool:
+    data = _read_raw(path)
+    return data.get("google_sync_overwrites_local", True)
+
+
+def save_google_sync_overwrites_local(value: bool, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    data = _read_raw(path)
+    data["google_sync_overwrites_local"] = value
+    _write_raw(data, path)
+
+
 FRITZBOX_KEYRING_PREFIX = "fritzbox:"
 
 

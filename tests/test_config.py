@@ -12,6 +12,8 @@ from voice2fritz.config import (
     set_fritzbox_password,
     get_password,
     set_password,
+    load_google_sync_overwrites_local,
+    save_google_sync_overwrites_local,
 )
 
 
@@ -151,3 +153,27 @@ def test_set_and_get_password_uses_keyring(monkeypatch):
 def test_get_password_unknown_user_returns_none(monkeypatch):
     monkeypatch.setattr("voice2fritz.config.keyring.get_password", lambda service, username: None)
     assert get_password("nobody") is None
+
+
+def test_load_google_sync_overwrites_local_defaults_to_true(tmp_path):
+    path = tmp_path / "does-not-exist.json"
+    assert load_google_sync_overwrites_local(path) is True
+
+
+def test_save_and_load_google_sync_overwrites_local_round_trip(tmp_path):
+    path = tmp_path / "config.json"
+
+    save_google_sync_overwrites_local(False, path)
+
+    assert load_google_sync_overwrites_local(path) is False
+
+
+def test_save_google_sync_overwrites_local_preserves_existing_account(tmp_path):
+    path = tmp_path / "config.json"
+    cfg = AccountConfig(host="fritz.box", username="user123")
+    save_config(cfg, path)
+
+    save_google_sync_overwrites_local(False, path)
+
+    assert load_config(path) == cfg
+    assert load_google_sync_overwrites_local(path) is False
