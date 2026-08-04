@@ -17,7 +17,7 @@ class SettingsDialog(QDialog):
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.save_button = QPushButton("Save")
         self.google_priority_checkbox = QCheckBox("Google sync overwrites local contacts with the same name")
-        self.google_priority_checkbox.setChecked(True)
+        self.google_priority_checkbox.setChecked(config.load_google_sync_overwrites_local())
 
         form = QFormLayout()
         form.addRow("Host", self.host_edit)

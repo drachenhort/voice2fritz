@@ -92,3 +92,15 @@ If you do have root and prefer a system-wide install instead:
 Both files are local-only and never committed to source control — treat
 `google_token.json` like a password, since it holds a refresh token for
 your Google account.
+
+If your OAuth consent screen is in "Testing" publishing status (the
+default, and what this walkthrough produces), Google expires refresh
+tokens after about 7 days; voice2fritz will automatically re-prompt for
+consent in your browser the next time you sync, so don't be surprised by
+an unexpected popup.
+
+Only contacts backed up to your Google account sync — contacts saved
+only on the device itself (not synced to Google) won't appear, since the
+People API only returns account-synced contacts. Contacts deleted on the
+phone are also not currently removed from voice2fritz's local phonebook
+on sync; this is a known limitation.

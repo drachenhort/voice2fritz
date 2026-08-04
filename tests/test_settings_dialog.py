@@ -42,3 +42,12 @@ def test_save_button_persists_google_priority_setting(qtbot, tmp_path, monkeypat
         dialog.save_button.click()
 
     assert saved_values == [False]
+
+
+def test_constructor_loads_saved_google_priority_setting(qtbot, monkeypatch):
+    monkeypatch.setattr(config, "load_google_sync_overwrites_local", lambda path=config.DEFAULT_CONFIG_PATH: False)
+
+    dialog = SettingsDialog()
+    qtbot.addWidget(dialog)
+
+    assert dialog.google_priority_checkbox.isChecked() is False

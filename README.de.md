@@ -94,3 +94,17 @@ bevorzugt: `sudo make install && sudo ldconfig` im `pjproject`-Wurzelverzeichnis
 Beide Dateien bleiben lokal und werden nie ins Repository übernommen –
 `google_token.json` wie ein Passwort behandeln, da es ein Refresh-Token
 für den Google-Account enthält.
+
+Steht der OAuth-Zustimmungsbildschirm im Veröffentlichungsstatus "Testing"
+(Standard, und das Ergebnis dieser Anleitung), lässt Google Refresh-Token
+nach etwa 7 Tagen ablaufen; voice2fritz fragt dann beim nächsten Sync
+automatisch erneut im Browser nach Zustimmung – ein unerwartetes Popup ist
+also kein Fehler.
+
+Es werden nur Kontakte synchronisiert, die im Google-Account gesichert
+sind – Kontakte, die nur lokal auf dem Gerät gespeichert sind (nicht mit
+Google synchronisiert), erscheinen nicht, da die People API nur
+account-synchronisierte Kontakte liefert. Auf dem Handy gelöschte
+Kontakte werden beim Sync aktuell auch nicht aus dem lokalen
+Telefonbuch von voice2fritz entfernt; dies ist eine bekannte
+Einschränkung.

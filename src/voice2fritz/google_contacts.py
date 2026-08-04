@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -15,10 +16,16 @@ SCOPES = ["https://www.googleapis.com/auth/contacts.readonly"]
 def _get_credentials() -> Credentials:
     creds = None
     if TOKEN_PATH.exists():
-        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+        except ValueError:
+            creds = None
 
     if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
+        try:
+            creds.refresh(Request())
+        except RefreshError:
+            creds = None
 
     if not creds or not creds.valid:
         if not CLIENT_SECRET_PATH.exists():
@@ -29,7 +36,8 @@ def _get_credentials() -> Credentials:
         flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRET_PATH), SCOPES)
         creds = flow.run_local_server(port=0)
 
-    TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
+    TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    TOKEN_PATH.touch(mode=0o600, exist_ok=True)
     TOKEN_PATH.write_text(creds.to_json())
     return creds
 
@@ -57,7 +65,11 @@ def _fetch_google_contacts(service) -> dict[str, list[str]]:
             if not names or not phone_numbers:
                 continue
             name = names[0].get("displayName", "")
-            numbers = [pn["value"] for pn in phone_numbers if pn.get("value")]
+            numbers = list(dict.fromkeys(
+                pn.get("canonicalForm") or pn["value"]
+                for pn in phone_numbers
+                if pn.get("value")
+            ))
             if name and numbers:
                 grouped.setdefault(name, []).extend(numbers)
 
