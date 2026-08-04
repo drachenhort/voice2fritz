@@ -69,6 +69,17 @@ def save_google_sync_overwrites_local(value: bool, path: Path = DEFAULT_CONFIG_P
     _write_raw(data, path)
 
 
+def load_contacts_sort_order(path: Path = DEFAULT_CONFIG_PATH) -> str:
+    data = _read_raw(path)
+    return data.get("contacts_sort_order", "name")
+
+
+def save_contacts_sort_order(value: str, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    data = _read_raw(path)
+    data["contacts_sort_order"] = value
+    _write_raw(data, path)
+
+
 FRITZBOX_KEYRING_PREFIX = "fritzbox:"
 
 

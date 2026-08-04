@@ -1,4 +1,12 @@
-from voice2fritz.contacts import Contact, add_contact, delete_contact, load_contacts, save_contacts, sync_contact_for_name
+from voice2fritz.contacts import (
+    Contact,
+    add_contact,
+    delete_contact,
+    delete_contact_by_value,
+    load_contacts,
+    save_contacts,
+    sync_contact_for_name,
+)
 
 
 def test_save_and_load_contacts_round_trip(tmp_path):
@@ -59,6 +67,27 @@ def test_delete_contact_out_of_range_is_noop(tmp_path):
     save_contacts([Contact(name="Anna Schmidt", number="+4917612345678")], path)
 
     delete_contact(5, path)
+
+    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678")]
+
+
+def test_delete_contact_by_value_removes_matching_entry(tmp_path):
+    path = tmp_path / "contacts.json"
+    save_contacts(
+        [Contact(name="Anna Schmidt", number="+4917612345678"), Contact(name="Ben Weber", number="+4930123456")],
+        path,
+    )
+
+    delete_contact_by_value(Contact(name="Anna Schmidt", number="+4917612345678"), path)
+
+    assert load_contacts(path) == [Contact(name="Ben Weber", number="+4930123456")]
+
+
+def test_delete_contact_by_value_unknown_contact_is_noop(tmp_path):
+    path = tmp_path / "contacts.json"
+    save_contacts([Contact(name="Anna Schmidt", number="+4917612345678")], path)
+
+    delete_contact_by_value(Contact(name="Nobody", number="+490000000"), path)
 
     assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678")]
 

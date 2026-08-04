@@ -14,6 +14,8 @@ from voice2fritz.config import (
     set_password,
     load_google_sync_overwrites_local,
     save_google_sync_overwrites_local,
+    load_contacts_sort_order,
+    save_contacts_sort_order,
 )
 
 
@@ -177,3 +179,27 @@ def test_save_google_sync_overwrites_local_preserves_existing_account(tmp_path):
 
     assert load_config(path) == cfg
     assert load_google_sync_overwrites_local(path) is False
+
+
+def test_load_contacts_sort_order_defaults_to_name(tmp_path):
+    path = tmp_path / "does-not-exist.json"
+    assert load_contacts_sort_order(path) == "name"
+
+
+def test_save_and_load_contacts_sort_order_round_trip(tmp_path):
+    path = tmp_path / "config.json"
+
+    save_contacts_sort_order("number", path)
+
+    assert load_contacts_sort_order(path) == "number"
+
+
+def test_save_contacts_sort_order_preserves_existing_account(tmp_path):
+    path = tmp_path / "config.json"
+    cfg = AccountConfig(host="fritz.box", username="user123")
+    save_config(cfg, path)
+
+    save_contacts_sort_order("number", path)
+
+    assert load_config(path) == cfg
+    assert load_contacts_sort_order(path) == "number"

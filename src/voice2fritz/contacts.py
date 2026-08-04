@@ -43,6 +43,15 @@ def delete_contact(index: int, path: Path = DEFAULT_CONTACTS_PATH) -> None:
         save_contacts(contacts, path)
 
 
+def delete_contact_by_value(contact: Contact, path: Path = DEFAULT_CONTACTS_PATH) -> None:
+    contacts = load_contacts(path)
+    try:
+        contacts.remove(contact)
+    except ValueError:
+        return
+    save_contacts(contacts, path)
+
+
 def sync_contact_for_name(
     name: str,
     numbers: list[str],
