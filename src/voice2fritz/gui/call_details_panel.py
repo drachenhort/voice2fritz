@@ -1,7 +1,6 @@
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import (
     QLabel,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -17,17 +16,12 @@ class CallDetailsPanel(QWidget):
         self.duration_label = QLabel()
         self.duration_label.setStyleSheet("color: #8a8f98;")
 
-        self.mute_button = QPushButton("🔇")
-        self.mute_button.setToolTip("Mute")
-        self.mute_button.setCheckable(True)
-
         layout = QVBoxLayout(self)
         layout.setSpacing(6)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.addWidget(self.name_label)
         layout.addWidget(self.state_label)
         layout.addWidget(self.duration_label)
-        layout.addWidget(self.mute_button)
         layout.addStretch()
 
         self._seconds = 0
@@ -42,7 +36,6 @@ class CallDetailsPanel(QWidget):
         self.state_label.setText("Active")
         self._seconds = 0
         self.duration_label.setText("0:00")
-        self.mute_button.setEnabled(True)
         self._timer.start()
 
     def set_idle(self) -> None:
@@ -50,8 +43,6 @@ class CallDetailsPanel(QWidget):
         self.name_label.setText("No active call")
         self.state_label.setText("")
         self.duration_label.setText("")
-        self.mute_button.setEnabled(False)
-        self.mute_button.setChecked(False)
 
     def set_state_text(self, text: str) -> None:
         self.state_label.setText(text)

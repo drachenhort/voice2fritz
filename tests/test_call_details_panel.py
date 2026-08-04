@@ -7,7 +7,6 @@ def test_starts_idle(qtbot):
 
     assert panel.name_label.text() == "No active call"
     assert panel.duration_label.text() == ""
-    assert not panel.mute_button.isEnabled()
 
 
 def test_set_active_call_with_name(qtbot):
@@ -19,7 +18,6 @@ def test_set_active_call_with_name(qtbot):
     assert panel.name_label.text() == "Anna Schmidt"
     assert panel.state_label.text() == "Active"
     assert panel.duration_label.text() == "0:00"
-    assert panel.mute_button.isEnabled()
 
 
 def test_set_active_call_without_name_shows_number(qtbot):
@@ -35,15 +33,12 @@ def test_set_idle_resets_everything(qtbot):
     panel = CallDetailsPanel()
     qtbot.addWidget(panel)
     panel.set_active_call("Anna Schmidt", "+4917612345678")
-    panel.mute_button.setChecked(True)
 
     panel.set_idle()
 
     assert panel.name_label.text() == "No active call"
     assert panel.state_label.text() == ""
     assert panel.duration_label.text() == ""
-    assert not panel.mute_button.isEnabled()
-    assert not panel.mute_button.isChecked()
 
 
 def test_set_state_text_updates_state_label(qtbot):
