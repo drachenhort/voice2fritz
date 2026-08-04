@@ -1,5 +1,7 @@
 # voice2fritz
 
+*[Deutsche Version](README.de.md)*
+
 A Linux desktop SIP softphone that registers with a FRITZ!Box and lets you
 make and receive calls over a headset. Built specifically for FRITZ!Box —
 no generic multi-provider SIP configuration, just host, username, and
