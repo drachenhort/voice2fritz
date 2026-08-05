@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtCore import QRect, Qt, QTimer
+from PySide6.QtGui import QAction, QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QApplication,
     QDockWidget,
@@ -36,6 +36,49 @@ _T9_LETTERS = {
     "*": "", "0": "+", "#": "",
 }
 
+_KEY_FLASH_MS = 120
+
+
+class DialpadButton(QPushButton):
+    """A keypad key that paints its T9 letters itself.
+
+    text() stays the bare digit — send_dtmf reads it — so the letters can't
+    live in the button text. They're painted into the strip that the QSS
+    padding-bottom frees up under the digit.
+    """
+
+    def __init__(self, digit: str, letters: str, parent=None):
+        super().__init__(digit, parent)
+        self.letters = letters
+        self.setObjectName("dialpadButton")
+        if digit in ("*", "#"):
+            self.setProperty("symbolKey", True)
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        if not self.letters:
+            return
+
+        painter = QPainter(self)
+        font = self.font()
+        font.setPixelSize(11)
+        font.setBold(False)
+        font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.0)
+        painter.setFont(font)
+        painter.setPen(QColor("#ffffff" if self.isDown() else "#8a8f98"))
+
+        strip = QRect(0, self.height() - 20, self.width(), 16)
+        painter.drawText(strip, Qt.AlignmentFlag.AlignCenter, self.letters)
+        painter.end()
+
+    def flash(self) -> None:
+        """Briefly show the pressed state, for keyboard-driven presses."""
+        self.setDown(True)
+        QTimer.singleShot(_KEY_FLASH_MS, self._clear_flash)
+
+    def _clear_flash(self) -> None:
+        self.setDown(False)
+
 
 class MainWindow(QMainWindow):
     def __init__(self, sip_engine, parent=None):
@@ -57,11 +100,10 @@ class MainWindow(QMainWindow):
         number_row.addWidget(self.number_edit)
         number_row.addWidget(self.backspace_button)
 
-        self.digit_buttons: dict[str, QPushButton] = {}
-        self.digit_letter_labels: dict[str, QLabel] = {}
+        self.digit_buttons: dict[str, DialpadButton] = {}
         dialpad_grid = QGridLayout()
-        dialpad_grid.setHorizontalSpacing(2)
-        dialpad_grid.setVerticalSpacing(0)
+        dialpad_grid.setHorizontalSpacing(6)
+        dialpad_grid.setVerticalSpacing(6)
         dialpad_grid.setContentsMargins(0, 0, 0, 0)
         dialpad_rows = [
             ["1", "2", "3"],
@@ -70,29 +112,17 @@ class MainWindow(QMainWindow):
             ["*", "0", "#"],
         ]
         for row, digits in enumerate(dialpad_rows):
+            dialpad_grid.setRowStretch(row, 1)
             for col, digit in enumerate(digits):
-                button = QPushButton(digit)
-                button.setObjectName("dialpadButton")
-                button.setMinimumSize(80, 18)
+                button = DialpadButton(digit, _T9_LETTERS[digit])
+                button.setMinimumSize(64, 54)
+                button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
                 button.clicked.connect(lambda checked=False, d=digit: self._on_digit_clicked(d))
 
-                letters_label = QLabel(_T9_LETTERS[digit])
-                letters_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                letters_label.setStyleSheet("color: #8a8f98; font-size: 11px;")
-                letters_label.setFixedHeight(14)
-
-                cell = QVBoxLayout()
-                cell.setSpacing(0)
-                cell.setContentsMargins(0, 0, 0, 0)
-                cell.addWidget(button)
-                cell.addWidget(letters_label)
-                cell_widget = QWidget()
-                cell_widget.setLayout(cell)
-                cell_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-                dialpad_grid.addWidget(cell_widget, row, col)
+                dialpad_grid.addWidget(button, row, col)
                 self.digit_buttons[digit] = button
-                self.digit_letter_labels[digit] = letters_label
+        for col in range(3):
+            dialpad_grid.setColumnStretch(col, 1)
 
         self.call_button = QPushButton("📞 CALL")
         self.call_button.setObjectName("callButton")
@@ -114,7 +144,7 @@ class MainWindow(QMainWindow):
 
         dialpad_column = QVBoxLayout()
         dialpad_column.addLayout(number_row)
-        dialpad_column.addLayout(dialpad_grid)
+        dialpad_column.addLayout(dialpad_grid, 1)
         dialpad_column.addWidget(self.call_button)
         dialpad_column.addLayout(call_control_row)
 
@@ -200,6 +230,7 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event) -> None:
         text = event.text()
         if text in self.digit_buttons:
+            self.digit_buttons[text].flash()
             self._on_digit_clicked(text)
         else:
             super().keyPressEvent(event)

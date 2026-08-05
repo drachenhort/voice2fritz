@@ -738,4 +738,33 @@ def test_t9_letters_match_mapping(qtbot):
         "*": "", "0": "+", "#": "",
     }
     for digit, letters in expected.items():
-        assert window.digit_letter_labels[digit].text() == letters
+        assert window.digit_buttons[digit].letters == letters
+        # the button's own text must stay the bare digit - send_dtmf reads it
+        assert window.digit_buttons[digit].text() == digit
+
+
+def test_symbol_keys_are_marked_but_digits_are_not(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    for digit in ("*", "#"):
+        assert window.digit_buttons[digit].property("symbolKey") is True
+    for digit in ("0", "1", "5", "9"):
+        assert window.digit_buttons[digit].property("symbolKey") in (None, False)
+
+
+def test_keyboard_press_flashes_the_matching_key(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.digit_buttons["5"].isDown() is False
+
+    qtbot.keyClick(window, "5")
+
+    # the flash timer has not fired yet, so the key is still held down
+    assert window.digit_buttons["5"].isDown() is True
+    assert window.number_edit.text() == "5"
+
+    qtbot.waitUntil(lambda: window.digit_buttons["5"].isDown() is False, timeout=1000)

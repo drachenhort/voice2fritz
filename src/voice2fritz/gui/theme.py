@@ -31,8 +31,12 @@ QPushButton:disabled {
 
 QPushButton#callButton {
     background-color: #2fa84f;
+    border: 1px solid #2fa84f;
+    border-radius: 14px;
     color: #ffffff;
     font-weight: bold;
+    font-size: 16px;
+    min-height: 48px;
 }
 
 QPushButton#callButton:hover {
@@ -43,14 +47,34 @@ QPushButton:checked {
     background-color: #a83b2f;
 }
 
-QPushButton[dtmfMode="true"] {
-    border: 2px solid #4a9eff;
+QPushButton#dialpadButton {
+    background-color: #262935;
+    border: 1px solid #383c48;
+    border-radius: 14px;
+    font-weight: bold;
+    font-size: 24px;
+    /* frees the bottom strip that DialpadButton paints the T9 letters into */
+    padding-bottom: 16px;
 }
 
-QPushButton#dialpadButton {
-    font-weight: bold;
-    font-size: 22px;
-    padding: 1px;
+QPushButton#dialpadButton:hover {
+    background-color: #333747;
+}
+
+QPushButton#dialpadButton:pressed {
+    background-color: #3d4152;
+}
+
+QPushButton#dialpadButton[symbolKey="true"] {
+    color: #8a8f98;
+}
+
+/* During a call the keys send DTMF, so a press means "tone sent" - show the
+   accent only while the key is actually down, not on all twelve for the whole
+   call. */
+QPushButton#dialpadButton[dtmfMode="true"]:pressed {
+    background-color: #4a9eff;
+    color: #ffffff;
 }
 
 QPushButton#navButton {
