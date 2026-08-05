@@ -127,10 +127,10 @@
 
   .key.symbol .digit { color: var(--muted); }
   .key.hover  { background: var(--key-hover); }
-  .key.press  { background: var(--accent); }
-  .key.press .digit,
-  .key.press .letters { color: #ffffff; }
-  .key.dtmf   { border: 2px solid var(--accent); }
+  .key.press  { background: #3d4152; }
+  .key.dtmf   { background: var(--accent); }
+  .key.dtmf .digit,
+  .key.dtmf .letters { color: #ffffff; }
 
   .call-btn {
     background: var(--green);
@@ -232,12 +232,12 @@
 
     <div class="state-item">
       <div class="key press"><span class="digit">2</span><span class="letters">ABC</span></div>
-      <div class="state-label"><b>Pressed</b><br>accent #4a9eff &mdash; also the 120&nbsp;ms flash on keyboard input</div>
+      <div class="state-label"><b>Pressed (idle)</b><br>#3d4152 &mdash; also the 120&nbsp;ms flash on keyboard input</div>
     </div>
 
     <div class="state-item">
       <div class="key dtmf"><span class="digit">2</span><span class="letters">ABC</span></div>
-      <div class="state-label"><b>DTMF mode</b><br>existing 2px accent border, during an active call</div>
+      <div class="state-label"><b>Pressed (DTMF)</b><br>accent #4a9eff, only while pressed during a call &mdash; blue means "tone sent", not "mode on"</div>
     </div>
 
     <div class="state-item">

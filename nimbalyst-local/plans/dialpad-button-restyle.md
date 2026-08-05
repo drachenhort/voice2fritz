@@ -71,13 +71,40 @@ QPushButton#dialpadButton {
     padding-bottom: 16px;   /* frees bottom strip for T9 letters */
 }
 QPushButton#dialpadButton:hover   { background-color: #333747; }
-QPushButton#dialpadButton:pressed { background-color: #4a9eff; color: #ffffff; }
+QPushButton#dialpadButton:pressed { background-color: #3d4152; }
 QPushButton#dialpadButton[symbolKey="true"] { color: #8a8f98; }
+
+/* DTMF: colour the key only while it is being pressed during a call */
+QPushButton#dialpadButton[dtmfMode="true"]:pressed {
+    background-color: #4a9eff;
+    color: #ffffff;
+}
 ```
 
-`*` and `#` get `setProperty("symbolKey", True)` at construction. Existing
-`QPushButton[dtmfMode="true"] { border: 2px solid #4a9eff; }` still applies — verify the
-2px border doesn't shift the content by 1px (add matching padding compensation if it does).
+`*` and `#` get `setProperty("symbolKey", True)` at construction.
+
+### 3a. DTMF feedback — press-time only
+
+The old rule `QPushButton[dtmfMode="true"] { border: 2px solid #4a9eff; }` is **removed**.
+It put a 2px accent border on all twelve keys for the whole call, which at the new key size
+reads as a wall of blue and competes with the status LED and the Mute button (visible in the
+full-window mockup).
+
+Instead the accent appears **only on the key being pressed, and only while a call is active**:
+
+- idle press → `#3d4152`, a subtle step up from the `#333747` hover
+- DTMF press → accent `#4a9eff` with white text
+
+Blue therefore means "tone sent" rather than "mode is on", which is information the user
+actually needs at the moment they need it. `_set_dtmf_mode` and the `dtmfMode` property stay
+exactly as they are — the property now selects the flash colour instead of a static border,
+so `tests/test_main_window.py:212` keeps passing unchanged.
+
+**Known trade-off:** nothing on the keypad now signals that keys send tones instead of
+appending to the number field. The Call Details dock already shows "Active" during a call,
+which is the closest existing cue. If that proves too subtle in real use, add a one-line
+hint to `CallDetailsPanel` rather than putting the border back — deliberately deferred, not
+overlooked.
 
 ### 4. Keyboard press highlight
 
@@ -103,12 +130,15 @@ green `#2fa84f` with the existing hover. It stays full-width under the grid.
 1. Add `DialpadButton` class with `paintEvent` letter rendering.
 2. Rewrite the grid construction loop in `MainWindow.__init__` — drop cell wrapper + `QLabel`, add stretches, set `symbolKey` on `*`/`#`.
 3. Update `theme.py` QSS (dialpad key, hover, pressed, symbolKey, CALL button).
-4. Add keyboard-press flash in `keyPressEvent` (import `QTimer`).
-5. Update `tests/test_main_window.py:741` to assert `digit_buttons[d].letters`.
-6. Add a test that `*`/`#` carry `symbolKey is True` and digits don't.
-7. Add a test that `keyPressEvent` with `"5"` leaves `digit_buttons["5"].isDown()` True immediately after (timer not yet fired).
-8. Run full suite (151 tests currently pass) — confirm no regression, especially DTMF and `dtmfMode`.
-9. Launch the app and eyeball the keypad against the mockup.
+4. Delete the static `QPushButton[dtmfMode="true"]` border rule; add the
+   `[dtmfMode="true"]:pressed` accent rule in its place (§3a).
+5. Add keyboard-press flash in `keyPressEvent` (import `QTimer`).
+6. Update `tests/test_main_window.py:741` to assert `digit_buttons[d].letters`.
+7. Add a test that `*`/`#` carry `symbolKey is True` and digits don't.
+8. Add a test that `keyPressEvent` with `"5"` leaves `digit_buttons["5"].isDown()` True immediately after (timer not yet fired).
+9. Run full suite (151 tests currently pass) — confirm no regression, especially DTMF and `dtmfMode`.
+10. Launch the app and eyeball the keypad against the mockup — including pressing a key
+    mid-call to confirm the accent flash actually fires on the DTMF path.
 
 ## Risks
 
@@ -116,10 +146,16 @@ green `#2fa84f` with the existing hover. It stays full-width under the grid.
 - **`:pressed` QSS vs `setDown(True)`** — confirm `setDown` actually triggers the `:pressed` selector (it should; `:pressed` maps to the sunken state). If not, use a `pressedFlash` dynamic property + unpolish/polish, like `_set_dtmf_mode` already does.
 - Letters at small window sizes could collide with the digit; the 54px min-height plus a
   minimum letter font size guards this.
+- **Attribute-plus-pseudo-state selectors** (`[dtmfMode="true"]:pressed`) are supported by Qt
+  Style Sheets, but the property must already be set when the state changes — it is, since
+  `_set_dtmf_mode` runs on call start and re-polishes. Verify on hardware (task 10); if the
+  combined selector misbehaves, set the colour imperatively in `_on_digit_clicked` instead.
 
-## Mockup
+## Mockups
 
-[Dialpad restyle mockup](../mockups/dialpad-restyle.mockup.html "width=520 height=720")
+[Dialpad keys and states](../mockups/dialpad-restyle.mockup.html "width=520 height=720")
+
+[Full window, idle and active call](../mockups/full-window-restyle.mockup.html "width=700 height=1180")
 
 ## Out of Scope
 

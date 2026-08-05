@@ -168,7 +168,10 @@
   .key .digit   { font-size: 24px; font-weight: bold; line-height: 1; color: #eee; }
   .key .letters { font-size: 11px; line-height: 1; letter-spacing: .12em; color: var(--muted); min-height: 11px; }
   .key.symbol .digit { color: var(--muted); }
-  .key.dtmf { border: 2px solid var(--accent); }
+  /* DTMF is shown only on the key actually being pressed during a call */
+  .key.dtmf-press { background: var(--accent); }
+  .key.dtmf-press .digit,
+  .key.dtmf-press .letters { color: #ffffff; }
 
   .call-btn {
     background: var(--green);
@@ -278,7 +281,7 @@
 </div>
 
 <!-- ========================= ACTIVE CALL ========================= -->
-<p class="caption">Active call &mdash; <span>keys switch to DTMF, Mute engaged</span></p>
+<p class="caption">Active call &mdash; <span>7 pressed, sending a DTMF tone. Unpressed keys stay neutral.</span></p>
 
 <div class="window">
   <div class="titlebar"><span class="dot"></span> voice2fritz</div>
@@ -331,18 +334,18 @@
         <div class="backspace">&#9003;</div>
       </div>
       <div class="keypad">
-        <div class="key dtmf"><span class="digit">1</span><span class="letters">&nbsp;</span></div>
-        <div class="key dtmf"><span class="digit">2</span><span class="letters">ABC</span></div>
-        <div class="key dtmf"><span class="digit">3</span><span class="letters">DEF</span></div>
-        <div class="key dtmf"><span class="digit">4</span><span class="letters">GHI</span></div>
-        <div class="key dtmf"><span class="digit">5</span><span class="letters">JKL</span></div>
-        <div class="key dtmf"><span class="digit">6</span><span class="letters">MNO</span></div>
-        <div class="key dtmf"><span class="digit">7</span><span class="letters">PQRS</span></div>
-        <div class="key dtmf"><span class="digit">8</span><span class="letters">TUV</span></div>
-        <div class="key dtmf"><span class="digit">9</span><span class="letters">WXYZ</span></div>
-        <div class="key dtmf symbol"><span class="digit">*</span><span class="letters">&nbsp;</span></div>
-        <div class="key dtmf"><span class="digit">0</span><span class="letters">+</span></div>
-        <div class="key dtmf symbol"><span class="digit">#</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">1</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">2</span><span class="letters">ABC</span></div>
+        <div class="key"><span class="digit">3</span><span class="letters">DEF</span></div>
+        <div class="key"><span class="digit">4</span><span class="letters">GHI</span></div>
+        <div class="key"><span class="digit">5</span><span class="letters">JKL</span></div>
+        <div class="key"><span class="digit">6</span><span class="letters">MNO</span></div>
+        <div class="key dtmf-press"><span class="digit">7</span><span class="letters">PQRS</span></div>
+        <div class="key"><span class="digit">8</span><span class="letters">TUV</span></div>
+        <div class="key"><span class="digit">9</span><span class="letters">WXYZ</span></div>
+        <div class="key symbol"><span class="digit">*</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">0</span><span class="letters">+</span></div>
+        <div class="key symbol"><span class="digit">#</span><span class="letters">&nbsp;</span></div>
       </div>
       <div class="call-btn off">&#128222; CALL</div>
       <div class="ctrl-row">
