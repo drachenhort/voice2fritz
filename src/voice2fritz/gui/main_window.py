@@ -4,7 +4,6 @@ from PySide6.QtCore import QRect, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QApplication,
-    QDockWidget,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -14,8 +13,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSizePolicy,
+    QStackedWidget,
     QSystemTrayIcon,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -24,10 +23,10 @@ from voice2fritz import call_log, config, contacts, ringtone
 from voice2fritz.audio import restore_saved_devices
 from voice2fritz.gui.call_details_panel import CallDetailsPanel
 from voice2fritz.gui.call_log_panel import CallLogPanel
-from voice2fritz.gui.contacts_dialog import ContactsDialog
 from voice2fritz.gui.contacts_panel import ContactsPanel
 from voice2fritz.gui.incoming_call_popup import IncomingCallPopup
-from voice2fritz.gui.settings_dialog import SettingsDialog
+from voice2fritz.gui.nav_rail import NavRail
+from voice2fritz.gui.settings_panel import SettingsPanel
 
 _T9_LETTERS = {
     "1": "", "2": "ABC", "3": "DEF",
@@ -138,25 +137,30 @@ class MainWindow(QMainWindow):
         self.mute_button.setCheckable(True)
         self.mute_button.setEnabled(False)
 
-        call_control_row = QHBoxLayout()
-        call_control_row.addWidget(self.hangup_button)
-        call_control_row.addWidget(self.mute_button)
-
         dialpad_column = QVBoxLayout()
         dialpad_column.addLayout(number_row)
         dialpad_column.addLayout(dialpad_grid, 1)
         dialpad_column.addWidget(self.call_button)
-        dialpad_column.addLayout(call_control_row)
 
-        self.settings_button = QPushButton("⚙ Settings")
-        self.settings_button.setObjectName("navButton")
-        self.settings_button.setToolTip("Settings")
-        self.contacts_button = QPushButton("Contacts")
-        self.contacts_button.setObjectName("navButton")
+        dialpad_page = QWidget()
+        dialpad_page.setLayout(dialpad_column)
 
-        nav_row = QHBoxLayout()
-        nav_row.addWidget(self.settings_button)
-        nav_row.addWidget(self.contacts_button)
+        self.log_panel = CallLogPanel()
+        self.contacts_panel = ContactsPanel()
+        self.settings_panel = SettingsPanel(self.sip_engine)
+
+        self.pages = QStackedWidget()
+        self.pages.addWidget(dialpad_page)
+        self.pages.addWidget(self.contacts_panel)
+        self.pages.addWidget(self.log_panel)
+        self.pages.addWidget(self.settings_panel)
+
+        self.nav_rail = NavRail()
+        self.nav_rail.pageSelected.connect(self.pages.setCurrentIndex)
+
+        self.log_panel.entryActivated.connect(self.number_edit.setText)
+        self.contacts_panel.contactSelected.connect(self.number_edit.setText)
+        self.settings_panel.accountSaved.connect(self._on_account_saved)
 
         self.sip_status_led = QLabel()
         self.sip_status_led.setFixedSize(14, 14)
@@ -166,37 +170,28 @@ class MainWindow(QMainWindow):
         status_row.addWidget(self.sip_status_led)
         status_row.addStretch()
 
-        layout = QVBoxLayout()
-        layout.addLayout(status_row)
-        layout.addLayout(nav_row)
-        layout.addLayout(dialpad_column)
+        self.call_details = CallDetailsPanel()
+        self.call_bar = QWidget()
+        self.call_bar.setObjectName("callBar")
+        call_bar_row = QHBoxLayout(self.call_bar)
+        call_bar_row.addWidget(self.call_details)
+        call_bar_row.addStretch()
+        call_bar_row.addWidget(self.hangup_button)
+        call_bar_row.addWidget(self.mute_button)
+        self.call_bar.setVisible(False)
+
+        content_column = QVBoxLayout()
+        content_column.addLayout(status_row)
+        content_column.addWidget(self.call_bar)
+        content_column.addWidget(self.pages, 1)
+
+        body_row = QHBoxLayout()
+        body_row.addWidget(self.nav_rail)
+        body_row.addLayout(content_column, 1)
 
         container = QWidget()
-        container.setLayout(layout)
+        container.setLayout(body_row)
         self.setCentralWidget(container)
-
-        self.call_details = CallDetailsPanel()
-        self.call_details_dock = QDockWidget("Call Details", self)
-        self.call_details_dock.setWidget(self.call_details)
-        self.call_details_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.call_details_dock.setFixedWidth(260)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.call_details_dock)
-
-        self.log_panel = CallLogPanel()
-        self.contacts_panel = ContactsPanel()
-
-        self.log_tabs = QTabWidget()
-        self.log_tabs.addTab(self.log_panel, "Call Log")
-        self.log_tabs.addTab(self.contacts_panel, "Contacts")
-
-        self.log_dock = QDockWidget("", self)
-        self.log_dock.setWidget(self.log_tabs)
-        self.log_dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
-        self.log_dock.setFixedWidth(260)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.log_dock)
-
-        self.log_panel.entryActivated.connect(self.number_edit.setText)
-        self.contacts_panel.contactSelected.connect(self.number_edit.setText)
 
         self._connect_signals()
         restore_saved_devices(self.sip_engine)
@@ -224,8 +219,6 @@ class MainWindow(QMainWindow):
         self.sip_engine.callStateChanged.connect(self._on_call_state_changed)
         self.sip_engine.callEnded.connect(self._on_call_ended)
         self.sip_engine.incomingCall.connect(self._on_incoming_call)
-        self.settings_button.clicked.connect(self._on_settings_clicked)
-        self.contacts_button.clicked.connect(self._on_contacts_clicked)
 
     def keyPressEvent(self, event) -> None:
         text = event.text()
@@ -315,6 +308,7 @@ class MainWindow(QMainWindow):
         self.hangup_button.setEnabled(True)
         self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
+        self.call_bar.setVisible(True)
 
         name = self._contact_name_for(number)
         self.call_details.set_active_call(name, number)
@@ -339,6 +333,7 @@ class MainWindow(QMainWindow):
         self.mute_button.setChecked(False)
         self._set_dtmf_mode(False)
         self.call_details.set_idle()
+        self.call_bar.setVisible(False)
         self._log_completed_call()
 
     def _log_completed_call(self) -> None:
@@ -383,6 +378,7 @@ class MainWindow(QMainWindow):
         self.hangup_button.setEnabled(True)
         self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
+        self.call_bar.setVisible(True)
         name = self._contact_name_for(self._call_number)
         self.call_details.set_active_call(name, self._call_number or "")
 
@@ -400,16 +396,6 @@ class MainWindow(QMainWindow):
             popup.close()
             popup.setParent(self)
             popup.deleteLater()
-
-    def _on_settings_clicked(self) -> None:
-        dialog = SettingsDialog(self.sip_engine, self)
-        dialog.accountSaved.connect(self._on_account_saved)
-        dialog.exec()
-
-    def _on_contacts_clicked(self) -> None:
-        dialog = ContactsDialog(self)
-        dialog.contactSelected.connect(self.number_edit.setText)
-        dialog.exec()
 
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:
         password = config.get_password(cfg.username) or ""

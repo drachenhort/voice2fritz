@@ -1,6 +1,5 @@
 import pytest
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QDockWidget
 
 from voice2fritz import call_log as call_log_module
 from voice2fritz import config as config_module
@@ -318,32 +317,43 @@ def test_declining_incoming_call_does_not_show_window_if_hidden(qtbot):
     assert not window.isVisible()
 
 
-def test_contacts_button_opens_dialog_and_fills_number_on_selection(qtbot, monkeypatch):
-    from PySide6.QtCore import QObject, Signal
-
-    class FakeContactsDialogQt(QObject):
-        contactSelected = Signal(str)
-
-        def __init__(self, parent=None):
-            super().__init__()
-            FakeContactsDialogQt.last_instance = self
-
-        def exec(self):
-            return None
-
-    monkeypatch.setattr("voice2fritz.gui.main_window.ContactsDialog", FakeContactsDialogQt)
-
+def test_contacts_rail_button_shows_contacts_page(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
-    window.contacts_button.click()
+    window.nav_rail.buttons["contacts"].click()
 
-    assert FakeContactsDialogQt.last_instance is not None
+    assert window.pages.currentWidget() is window.contacts_panel
 
-    FakeContactsDialogQt.last_instance.contactSelected.emit("+4917612345678")
 
-    assert window.number_edit.text() == "+4917612345678"
+def test_settings_rail_button_shows_settings_page(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.nav_rail.buttons["settings"].click()
+
+    assert window.pages.currentWidget() is window.settings_panel
+
+
+def test_call_log_rail_button_shows_call_log_page(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.nav_rail.buttons["call_log"].click()
+
+    assert window.pages.currentWidget() is window.log_panel
+
+
+def test_dialpad_is_the_initial_page(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.pages.currentIndex() == 0
+    assert window.nav_rail.buttons["dialpad"].isChecked() is True
 
 
 def test_account_saved_triggers_reregistration(qtbot, monkeypatch):
@@ -485,16 +495,6 @@ def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):
     assert logged[0].name == "Anna Schmidt"
 
 
-def test_log_dock_is_always_visible(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-    window.show()
-
-    assert window.log_dock.isVisible()
-    assert not hasattr(window, "log_button")
-
-
 def test_contacts_tab_selection_fills_number_field(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
@@ -503,16 +503,6 @@ def test_contacts_tab_selection_fills_number_field(qtbot):
     window.contacts_panel.contactSelected.emit("+4917612345678")
 
     assert window.number_edit.text() == "+4917612345678"
-
-
-def test_log_dock_holds_a_tab_widget_with_log_and_contacts(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    assert window.log_dock.widget() is window.log_tabs
-    assert window.log_tabs.indexOf(window.log_panel) >= 0
-    assert window.log_tabs.indexOf(window.contacts_panel) >= 0
 
 
 def test_tray_icon_created_with_show_and_quit_actions(qtbot):
@@ -689,41 +679,37 @@ def test_outgoing_call_updates_call_details_panel(qtbot):
     assert window.call_details.name_label.text() == "No active call"
 
 
-def test_call_details_docks_stacked_on_left(qtbot):
+def test_call_bar_hidden_when_idle(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.call_bar.isVisible() is False
+
+
+def test_call_bar_shown_during_a_call_and_hidden_after_hangup(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
     window.show()
 
-    from PySide6.QtCore import Qt
+    window.number_edit.setText("+4917612345678")
+    window.call_button.click()
 
-    assert window.dockWidgetArea(window.call_details_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
-    assert window.dockWidgetArea(window.log_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
+    assert window.call_bar.isVisible() is True
+
+    window.hangup_button.click()
+
+    assert window.call_bar.isVisible() is False
 
 
-def test_call_details_dock_is_fixed_in_place(qtbot):
+def test_call_bar_holds_hangup_and_mute_buttons(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
     qtbot.addWidget(window)
 
-    assert window.call_details_dock.features() == QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
-
-
-def test_log_dock_is_fixed_in_place(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    assert window.log_dock.features() == QDockWidget.DockWidgetFeature.NoDockWidgetFeatures
-
-
-def test_docks_have_fixed_width_so_dialpad_cannot_be_resized(qtbot):
-    engine = FakeSipEngine()
-    window = MainWindow(engine)
-    qtbot.addWidget(window)
-
-    assert window.call_details_dock.minimumWidth() == window.call_details_dock.maximumWidth()
-    assert window.log_dock.minimumWidth() == window.log_dock.maximumWidth()
+    assert window.call_bar.layout().indexOf(window.hangup_button) >= 0
+    assert window.call_bar.layout().indexOf(window.mute_button) >= 0
 
 
 def test_t9_letters_match_mapping(qtbot):

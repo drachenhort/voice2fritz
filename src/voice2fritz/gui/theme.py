@@ -83,6 +83,38 @@ QPushButton#navButton {
     padding: 10px;
 }
 
+QWidget#navRail {
+    background-color: #16181f;
+    border-right: 1px solid #262a33;
+}
+
+QPushButton#railButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 10px;
+    font-size: 19px;
+    color: #8a8f98;
+    min-width: 44px;
+    min-height: 44px;
+    max-width: 44px;
+    max-height: 44px;
+    padding: 0px;
+}
+
+QPushButton#railButton:hover {
+    background-color: #262935;
+}
+
+QPushButton#railButton:checked {
+    background-color: #262935;
+    color: #4a9eff;
+}
+
+QWidget#callBar {
+    background-color: #191b23;
+    border-bottom: 1px solid #262a33;
+}
+
 QPushButton#addButton {
     background-color: #2fa84f;
     color: #ffffff;
