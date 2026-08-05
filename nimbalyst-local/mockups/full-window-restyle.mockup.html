@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Palette from src/voice2fritz/gui/theme.py DARK_STYLESHEET.
+     Layout mirrors MainWindow: two QDockWidgets stacked in the LeftDockWidgetArea
+     (Call Details above, Call Log below), central widget on the right. */
+  :root {
+    --bg:          #1c1e26;
+    --input-bg:    #12141a;
+    --border:      #333333;
+    --btn:         #2a2d38;
+    --btn-border:  #383c48;
+    --key:         #262935;
+    --key-hover:   #333747;
+    --accent:      #4a9eff;
+    --green:       #2fa84f;
+    --red:         #a83b2f;
+    --text:        #dddddd;
+    --muted:       #8a8f98;
+    --disabled:    #666666;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; padding: 20px;
+    background: #14161c;
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+  }
+
+  .caption {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  .caption span { color: var(--text); text-transform: none; letter-spacing: 0; }
+
+  /* ---- window chrome ---- */
+  .window {
+    width: 640px;
+    background: var(--bg);
+    border: 1px solid #2a2d38;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 26px;
+  }
+  .titlebar {
+    background: #171921;
+    border-bottom: 1px solid #262a33;
+    padding: 7px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .titlebar .dot { width: 9px; height: 9px; border-radius: 5px; background: #2a2d38; }
+
+  .body { display: flex; align-items: stretch; }
+
+  /* ---- left dock area ---- */
+  .docks {
+    width: 258px;
+    border-right: 1px solid #262a33;
+    display: flex; flex-direction: column;
+  }
+  .dock-title {
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--muted);
+    background: #191b23;
+    border-bottom: 1px solid #262a33;
+  }
+  .dock-title.blank { min-height: 25px; }
+
+  .details { padding: 12px; }
+  .details .name  { font-weight: bold; font-size: 15px; }
+  .details .state { margin-top: 6px; }
+  .details .dur   { margin-top: 6px; color: var(--muted); }
+  .details.idle .name { color: var(--muted); font-weight: normal; font-size: 13px; }
+
+  .log { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .log-list {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px;
+    min-height: 190px;
+  }
+  .log-row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 6px 8px;
+  }
+  .log-row.sel { background: #2a4d6e; border-radius: 3px; }
+  .log-row .ico { font-size: 16px; width: 14px; text-align: center; }
+  .ico.out    { color: var(--green); }
+  .ico.in     { color: var(--text); }
+  .ico.missed { color: var(--red); }
+  .log-row .col { display: flex; flex-direction: column; min-width: 0; }
+  .log-row .t1 { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .log-row .t2 { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .log-row .time { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+  .clear-btn {
+    background: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    color: #fff;
+    padding: 8px;
+    text-align: center;
+  }
+
+  /* ---- central widget ---- */
+  .central { flex: 1; padding: 12px; }
+
+  .status-row { display: flex; align-items: center; margin-bottom: 10px; }
+  .led { width: 14px; height: 14px; border-radius: 7px; background: var(--green); }
+
+  .nav-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .nav-btn {
+    flex: 1;
+    background: var(--btn);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    color: #eee;
+    padding: 10px;
+    font-size: 14px; font-weight: 600;
+    text-align: center;
+  }
+
+  .number-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .number-field {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: #fff;
+    font-size: 20px;
+    text-align: right;
+    letter-spacing: .04em;
+  }
+  .backspace {
+    width: 46px;
+    background: var(--btn);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    color: #eee; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+
+  .key {
+    background: var(--key);
+    border: 1px solid var(--btn-border);
+    border-radius: 14px;
+    min-height: 54px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 1px;
+  }
+  .key .digit   { font-size: 24px; font-weight: bold; line-height: 1; color: #eee; }
+  .key .letters { font-size: 11px; line-height: 1; letter-spacing: .12em; color: var(--muted); min-height: 11px; }
+  .key.symbol .digit { color: var(--muted); }
+  .key.dtmf { border: 2px solid var(--accent); }
+
+  .call-btn {
+    background: var(--green);
+    border: 1px solid var(--green);
+    border-radius: 14px;
+    color: #fff; font-weight: bold; font-size: 16px;
+    min-height: 48px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 8px;
+  }
+  .call-btn.off {
+    background: var(--btn);
+    border-color: var(--btn-border);
+    color: var(--disabled);
+  }
+
+  .ctrl-row { display: flex; gap: 6px; }
+  .ctrl-btn {
+    flex: 1;
+    background: var(--btn);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    color: var(--disabled);
+    padding: 10px;
+    font-size: 14px; font-weight: 600;
+    text-align: center;
+  }
+  .ctrl-btn.on      { color: #eee; }
+  .ctrl-btn.checked { background: var(--red); border-color: var(--red); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ============================ IDLE ============================ -->
+<p class="caption">Idle &mdash; <span>no active call</span></p>
+
+<div class="window">
+  <div class="titlebar"><span class="dot"></span> voice2fritz</div>
+  <div class="body">
+
+    <div class="docks">
+      <div class="dock-title">Call Details</div>
+      <div class="details idle">
+        <div class="name">No active call</div>
+      </div>
+
+      <div class="dock-title blank"></div>
+      <div class="log">
+        <div class="log-list">
+          <div class="log-row">
+            <div class="ico out">&#8599;</div>
+            <div class="col"><div class="t1">Anna Berger</div><div class="t2">0176 2481 33 &middot; 1:24</div></div>
+            <div class="time">13:37</div>
+          </div>
+          <div class="log-row">
+            <div class="ico in">&#8601;</div>
+            <div class="col"><div class="t1">Praxis Dr. Weber</div><div class="t2">030 445 22 10 &middot; 4:02</div></div>
+            <div class="time">11:05</div>
+          </div>
+          <div class="log-row">
+            <div class="ico missed">&#8601;</div>
+            <div class="col"><div class="t1">0151 9922 77</div><div class="t2">0151 9922 77</div></div>
+            <div class="time">09:12</div>
+          </div>
+          <div class="log-row">
+            <div class="ico out">&#8599;</div>
+            <div class="col"><div class="t1">FRITZ!Box</div><div class="t2">**9 &middot; 0:07</div></div>
+            <div class="time">08:40</div>
+          </div>
+        </div>
+        <div class="clear-btn">Clear</div>
+      </div>
+    </div>
+
+    <div class="central">
+      <div class="status-row"><div class="led" title="200 OK"></div></div>
+      <div class="nav-row">
+        <div class="nav-btn">&#9881; Settings</div>
+        <div class="nav-btn">Contacts</div>
+      </div>
+      <div class="number-row">
+        <div class="number-field">0176 2481 33</div>
+        <div class="backspace">&#9003;</div>
+      </div>
+      <div class="keypad">
+        <div class="key"><span class="digit">1</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">2</span><span class="letters">ABC</span></div>
+        <div class="key"><span class="digit">3</span><span class="letters">DEF</span></div>
+        <div class="key"><span class="digit">4</span><span class="letters">GHI</span></div>
+        <div class="key"><span class="digit">5</span><span class="letters">JKL</span></div>
+        <div class="key"><span class="digit">6</span><span class="letters">MNO</span></div>
+        <div class="key"><span class="digit">7</span><span class="letters">PQRS</span></div>
+        <div class="key"><span class="digit">8</span><span class="letters">TUV</span></div>
+        <div class="key"><span class="digit">9</span><span class="letters">WXYZ</span></div>
+        <div class="key symbol"><span class="digit">*</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">0</span><span class="letters">+</span></div>
+        <div class="key symbol"><span class="digit">#</span><span class="letters">&nbsp;</span></div>
+      </div>
+      <div class="call-btn">&#128222; CALL</div>
+      <div class="ctrl-row">
+        <div class="ctrl-btn">&#10005; Hangup</div>
+        <div class="ctrl-btn">&#128263; Mute</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========================= ACTIVE CALL ========================= -->
+<p class="caption">Active call &mdash; <span>keys switch to DTMF, Mute engaged</span></p>
+
+<div class="window">
+  <div class="titlebar"><span class="dot"></span> voice2fritz</div>
+  <div class="body">
+
+    <div class="docks">
+      <div class="dock-title">Call Details</div>
+      <div class="details">
+        <div class="name">Anna Berger</div>
+        <div class="state">Active</div>
+        <div class="dur">1:24</div>
+      </div>
+
+      <div class="dock-title blank"></div>
+      <div class="log">
+        <div class="log-list">
+          <div class="log-row sel">
+            <div class="ico out">&#8599;</div>
+            <div class="col"><div class="t1">Anna Berger</div><div class="t2">0176 2481 33 &middot; 1:24</div></div>
+            <div class="time">13:37</div>
+          </div>
+          <div class="log-row">
+            <div class="ico in">&#8601;</div>
+            <div class="col"><div class="t1">Praxis Dr. Weber</div><div class="t2">030 445 22 10 &middot; 4:02</div></div>
+            <div class="time">11:05</div>
+          </div>
+          <div class="log-row">
+            <div class="ico missed">&#8601;</div>
+            <div class="col"><div class="t1">0151 9922 77</div><div class="t2">0151 9922 77</div></div>
+            <div class="time">09:12</div>
+          </div>
+          <div class="log-row">
+            <div class="ico out">&#8599;</div>
+            <div class="col"><div class="t1">FRITZ!Box</div><div class="t2">**9 &middot; 0:07</div></div>
+            <div class="time">08:40</div>
+          </div>
+        </div>
+        <div class="clear-btn">Clear</div>
+      </div>
+    </div>
+
+    <div class="central">
+      <div class="status-row"><div class="led" title="200 OK"></div></div>
+      <div class="nav-row">
+        <div class="nav-btn">&#9881; Settings</div>
+        <div class="nav-btn">Contacts</div>
+      </div>
+      <div class="number-row">
+        <div class="number-field">0176 2481 33</div>
+        <div class="backspace">&#9003;</div>
+      </div>
+      <div class="keypad">
+        <div class="key dtmf"><span class="digit">1</span><span class="letters">&nbsp;</span></div>
+        <div class="key dtmf"><span class="digit">2</span><span class="letters">ABC</span></div>
+        <div class="key dtmf"><span class="digit">3</span><span class="letters">DEF</span></div>
+        <div class="key dtmf"><span class="digit">4</span><span class="letters">GHI</span></div>
+        <div class="key dtmf"><span class="digit">5</span><span class="letters">JKL</span></div>
+        <div class="key dtmf"><span class="digit">6</span><span class="letters">MNO</span></div>
+        <div class="key dtmf"><span class="digit">7</span><span class="letters">PQRS</span></div>
+        <div class="key dtmf"><span class="digit">8</span><span class="letters">TUV</span></div>
+        <div class="key dtmf"><span class="digit">9</span><span class="letters">WXYZ</span></div>
+        <div class="key dtmf symbol"><span class="digit">*</span><span class="letters">&nbsp;</span></div>
+        <div class="key dtmf"><span class="digit">0</span><span class="letters">+</span></div>
+        <div class="key dtmf symbol"><span class="digit">#</span><span class="letters">&nbsp;</span></div>
+      </div>
+      <div class="call-btn off">&#128222; CALL</div>
+      <div class="ctrl-row">
+        <div class="ctrl-btn on">&#10005; Hangup</div>
+        <div class="ctrl-btn checked">&#128263; Mute</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
