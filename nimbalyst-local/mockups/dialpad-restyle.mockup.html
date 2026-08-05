@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Palette lifted from src/voice2fritz/gui/theme.py DARK_STYLESHEET */
+  :root {
+    --bg:          #1c1e26;
+    --input-bg:    #12141a;
+    --border:      #333333;
+    --btn:         #2a2d38;
+    --btn-border:  #383c48;
+    --btn-hover:   #383c48;
+    --key:         #262935;
+    --key-hover:   #333747;
+    --accent:      #4a9eff;
+    --green:       #2fa84f;
+    --green-hover: #36bd59;
+    --red:         #a83b2f;
+    --text:        #dddddd;
+    --muted:       #8a8f98;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 20px;
+    background: #14161c;
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 13px;
+  }
+
+  .caption {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+
+  /* ---- the app window ---- */
+  .window {
+    width: 340px;
+    background: var(--bg);
+    border: 1px solid #2a2d38;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .status-row { display: flex; align-items: center; margin-bottom: 10px; }
+  .led {
+    width: 14px; height: 14px; border-radius: 7px;
+    background: var(--green);
+  }
+
+  .nav-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .nav-btn {
+    flex: 1;
+    background: var(--btn);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    color: #eeeeee;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .number-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .number-field {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: #ffffff;
+    font-size: 20px;
+    text-align: right;
+    letter-spacing: .04em;
+  }
+  .backspace {
+    width: 46px;
+    background: var(--btn);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    color: #eeeeee;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---- the restyled keypad ---- */
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .key {
+    /* one widget: digit + T9 letters painted inside, no stacked QLabel */
+    background: var(--key);
+    border: 1px solid var(--btn-border);
+    border-radius: 14px;
+    min-height: 54px;
+    padding: 6px 0 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+  }
+  .key .digit {
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1;
+    color: #eeeeee;
+  }
+  .key .letters {
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: .12em;
+    color: var(--muted);
+    min-height: 11px;
+  }
+
+  .key.symbol .digit { color: var(--muted); }
+  .key.hover  { background: var(--key-hover); }
+  .key.press  { background: var(--accent); }
+  .key.press .digit,
+  .key.press .letters { color: #ffffff; }
+  .key.dtmf   { border: 2px solid var(--accent); }
+
+  .call-btn {
+    background: var(--green);
+    border: 1px solid var(--green);
+    border-radius: 14px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 16px;
+    min-height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .ctrl-row { display: flex; gap: 6px; }
+  .ctrl-btn {
+    flex: 1;
+    background: var(--btn);
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    color: #666666;      /* disabled, no active call */
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /* ---- side panel: key states ---- */
+  .layout { display: flex; gap: 28px; align-items: flex-start; }
+
+  .states { width: 150px; }
+  .state-item { margin-bottom: 14px; }
+  .state-item .key { width: 88px; }
+  .state-label {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 5px;
+  }
+  .state-label b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <div>
+    <p class="caption">Main window &mdash; restyled keypad</p>
+    <div class="window">
+
+      <div class="status-row"><div class="led" title="200 OK"></div></div>
+
+      <div class="nav-row">
+        <div class="nav-btn">&#9881; Settings</div>
+        <div class="nav-btn">Contacts</div>
+      </div>
+
+      <div class="number-row">
+        <div class="number-field">0176 2481 33</div>
+        <div class="backspace">&#9003;</div>
+      </div>
+
+      <div class="keypad">
+        <div class="key"><span class="digit">1</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">2</span><span class="letters">ABC</span></div>
+        <div class="key"><span class="digit">3</span><span class="letters">DEF</span></div>
+        <div class="key"><span class="digit">4</span><span class="letters">GHI</span></div>
+        <div class="key press"><span class="digit">5</span><span class="letters">JKL</span></div>
+        <div class="key"><span class="digit">6</span><span class="letters">MNO</span></div>
+        <div class="key"><span class="digit">7</span><span class="letters">PQRS</span></div>
+        <div class="key"><span class="digit">8</span><span class="letters">TUV</span></div>
+        <div class="key"><span class="digit">9</span><span class="letters">WXYZ</span></div>
+        <div class="key symbol"><span class="digit">*</span><span class="letters">&nbsp;</span></div>
+        <div class="key"><span class="digit">0</span><span class="letters">+</span></div>
+        <div class="key symbol"><span class="digit">#</span><span class="letters">&nbsp;</span></div>
+      </div>
+
+      <div class="call-btn">&#128222; CALL</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-btn">&#10005; Hangup</div>
+        <div class="ctrl-btn">&#128263; Mute</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="states">
+    <p class="caption">Key states</p>
+
+    <div class="state-item">
+      <div class="key"><span class="digit">2</span><span class="letters">ABC</span></div>
+      <div class="state-label"><b>Default</b><br>#262935, radius 14</div>
+    </div>
+
+    <div class="state-item">
+      <div class="key hover"><span class="digit">2</span><span class="letters">ABC</span></div>
+      <div class="state-label"><b>Hover</b><br>#333747</div>
+    </div>
+
+    <div class="state-item">
+      <div class="key press"><span class="digit">2</span><span class="letters">ABC</span></div>
+      <div class="state-label"><b>Pressed</b><br>accent #4a9eff &mdash; also the 120&nbsp;ms flash on keyboard input</div>
+    </div>
+
+    <div class="state-item">
+      <div class="key dtmf"><span class="digit">2</span><span class="letters">ABC</span></div>
+      <div class="state-label"><b>DTMF mode</b><br>existing 2px accent border, during an active call</div>
+    </div>
+
+    <div class="state-item">
+      <div class="key symbol"><span class="digit">*</span><span class="letters">&nbsp;</span></div>
+      <div class="state-label"><b>Symbol key</b><br>* and # dimmed to #8a8f98</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
