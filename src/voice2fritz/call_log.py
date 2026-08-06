@@ -21,16 +21,23 @@ def load_call_log(path: Path = DEFAULT_CALL_LOG_PATH) -> list[CallLogEntry]:
         data = json.loads(path.read_text())
     except json.JSONDecodeError:
         return []
-    return [
-        CallLogEntry(
-            number=item["number"],
-            name=item["name"],
-            direction=item["direction"],
-            timestamp=item["timestamp"],
-            duration_seconds=item["duration_seconds"],
-        )
-        for item in data
-    ]
+    entries = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        try:
+            entries.append(
+                CallLogEntry(
+                    number=item["number"],
+                    name=item["name"],
+                    direction=item["direction"],
+                    timestamp=item["timestamp"],
+                    duration_seconds=item["duration_seconds"],
+                )
+            )
+        except KeyError:
+            continue
+    return entries
 
 
 def _save_call_log(entries: list[CallLogEntry], path: Path = DEFAULT_CALL_LOG_PATH) -> None:

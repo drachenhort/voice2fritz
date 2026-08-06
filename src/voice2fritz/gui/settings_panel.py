@@ -55,7 +55,8 @@ class SettingsPanel(QWidget):
             username=self.username_edit.text(),
         )
         config.save_config(cfg)
-        config.set_password(cfg.username, self.password_edit.text())
+        if self.password_edit.text():
+            config.set_password(cfg.username, self.password_edit.text())
         config.save_google_sync_overwrites_local(self.google_priority_checkbox.isChecked())
         self.accountSaved.emit(cfg)
 

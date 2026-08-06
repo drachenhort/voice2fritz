@@ -20,15 +20,22 @@ def load_contacts(path: Path = DEFAULT_CONTACTS_PATH) -> list[Contact]:
         data = json.loads(path.read_text())
     except json.JSONDecodeError:
         return []
-    return [
-        Contact(
-            name=item["name"],
-            number=item["number"],
-            source=item.get("source", "local"),
-            number_type=item.get("number_type", ""),
-        )
-        for item in data
-    ]
+    contacts = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        try:
+            contacts.append(
+                Contact(
+                    name=item["name"],
+                    number=item["number"],
+                    source=item.get("source", "local"),
+                    number_type=item.get("number_type", ""),
+                )
+            )
+        except KeyError:
+            continue
+    return contacts
 
 
 def save_contacts(contacts: list[Contact], path: Path = DEFAULT_CONTACTS_PATH) -> None:

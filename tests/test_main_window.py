@@ -102,6 +102,28 @@ def test_call_button_calls_engine_make_call_with_entered_number(qtbot):
     assert engine.calls_made == ["01234567"]
 
 
+def test_call_button_ignored_with_empty_number(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("")
+    window.call_button.click()
+
+    assert engine.calls_made == []
+
+
+def test_call_button_ignored_with_whitespace_only_number(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("   ")
+    window.call_button.click()
+
+    assert engine.calls_made == []
+
+
 def test_hangup_button_calls_engine_hangup(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)

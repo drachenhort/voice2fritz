@@ -300,7 +300,9 @@ class MainWindow(QMainWindow):
         return ""
 
     def _on_call_clicked(self) -> None:
-        number = self.number_edit.text()
+        number = self.number_edit.text().strip()
+        if not number:
+            return
         self._active_call = self.sip_engine.make_call(number)
         self._call_direction = "outgoing"
         self._call_number = number

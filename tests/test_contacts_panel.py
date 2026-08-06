@@ -214,8 +214,11 @@ def test_sync_button_reloads_table_on_success(qtbot, monkeypatch):
 
     panel.sync_button.click()
 
-    assert panel.contact_table.rowCount() == 1
+    qtbot.waitUntil(lambda: panel.contact_table.rowCount() == 1, timeout=2000)
+    qtbot.waitUntil(lambda: panel._sync_thread is None, timeout=2000)
+
     assert _row_texts(panel, 0) == ("Anna Schmidt", "mobile", "+4917612345678")
+    assert panel.sync_button.isEnabled()
 
 
 def test_sync_button_shows_warning_on_failure(qtbot, monkeypatch):
@@ -236,4 +239,36 @@ def test_sync_button_shows_warning_on_failure(qtbot, monkeypatch):
 
     panel.sync_button.click()
 
-    assert len(warnings) == 1
+    qtbot.waitUntil(lambda: len(warnings) == 1, timeout=2000)
+    qtbot.waitUntil(lambda: panel._sync_thread is None, timeout=2000)
+
+    assert panel.sync_button.isEnabled()
+
+
+def test_sync_button_ignores_click_while_sync_in_progress(qtbot, monkeypatch):
+    import time
+
+    from PySide6.QtWidgets import QMessageBox
+    from voice2fritz.gui import contacts_panel as contacts_panel_module
+
+    monkeypatch.setattr(contacts_module, "load_contacts", lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [])
+    calls = []
+
+    def fake_sync():
+        calls.append(1)
+        time.sleep(0.2)
+        return 0
+
+    monkeypatch.setattr(contacts_panel_module.google_contacts, "sync_google_contacts", fake_sync)
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+    panel = ContactsPanel()
+    qtbot.addWidget(panel)
+
+    panel.sync_button.click()
+    panel.sync_button.click()
+
+    qtbot.waitUntil(lambda: panel._sync_thread is None, timeout=3000)
+
+    assert calls == [1]
+    assert panel.sync_button.isEnabled()

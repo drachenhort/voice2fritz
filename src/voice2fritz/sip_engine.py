@@ -69,6 +69,9 @@ class SipEngine(QObject):
     def register(self, host: str, username: str, password: str) -> None:
         if self._ep is None:
             raise RuntimeError("call start() first")
+        if self._account is not None:
+            self._account.delete()
+            self._account = None
         self._host = host
         acc_cfg = pj.AccountConfig()
         acc_cfg.idUri = f"sip:{username}@{host}"
@@ -82,6 +85,9 @@ class SipEngine(QObject):
     def make_call(self, number: str) -> SipCall:
         if self._account is None:
             raise RuntimeError("call register() first")
+        number = number.strip()
+        if not number:
+            raise ValueError("cannot dial an empty number")
         call = SipCall(self, self._account)
         call_prm = pj.CallOpParam(True)
         call.makeCall(f"sip:{number}@{self._host}", call_prm)
@@ -94,7 +100,7 @@ class SipEngine(QObject):
 
     def hangup(self, call: SipCall) -> None:
         prm = pj.CallOpParam()
-        prm.statusCode = pj.PJSIP_SC_DECLINE
+        prm.statusCode = pj.PJSIP_SC_OK
         call.hangup(prm)
 
     def decline(self, call: SipCall) -> None:

@@ -21,6 +21,22 @@ def test_load_malformed_json_returns_empty_list(tmp_path):
     assert load_call_log(path) == []
 
 
+def test_load_call_log_skips_entries_missing_keys(tmp_path):
+    path = tmp_path / "call_log.json"
+    path.write_text(
+        '[\n'
+        '  {"number": "+4917612345678", "name": "Anna Schmidt", "direction": "outgoing", '
+        '   "timestamp": "2026-08-04T14:00:00", "duration_seconds": 60},\n'
+        '  {"number": "incomplete"},\n'
+        '  "not a dict"\n'
+        ']'
+    )
+
+    assert load_call_log(path) == [
+        CallLogEntry(number="+4917612345678", name="Anna Schmidt", direction="outgoing", timestamp="2026-08-04T14:00:00", duration_seconds=60)
+    ]
+
+
 def test_append_creates_parent_dirs(tmp_path):
     path = tmp_path / "nested" / "dir" / "call_log.json"
     entry = CallLogEntry(number="+4917612345678", name="", direction="missed", timestamp="2026-08-04T14:20:00", duration_seconds=0)

@@ -1,4 +1,4 @@
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -16,6 +16,20 @@ from PySide6.QtWidgets import (
 
 from voice2fritz import config, contacts as contacts_module
 from voice2fritz import google_contacts
+
+
+class _GoogleSyncWorker(QObject):
+    finished = Signal(int)
+    failed = Signal(str)
+
+    @Slot()
+    def run(self) -> None:
+        try:
+            count = google_contacts.sync_google_contacts()
+        except Exception as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.finished.emit(count)
 
 
 class ContactsPanel(QWidget):
@@ -131,13 +145,35 @@ class ContactsPanel(QWidget):
             self._reload_list()
 
     def _on_sync_clicked(self) -> None:
-        try:
-            count = google_contacts.sync_google_contacts()
-        except Exception as exc:
-            QMessageBox.warning(self, "Contacts", f"Could not sync Google contacts: {exc}")
+        if getattr(self, "_sync_thread", None) is not None:
             return
+        self.sync_button.setEnabled(False)
+
+        self._sync_thread = QThread(self)
+        self._sync_worker = _GoogleSyncWorker()
+        self._sync_worker.moveToThread(self._sync_thread)
+
+        self._sync_thread.started.connect(self._sync_worker.run)
+        self._sync_worker.finished.connect(self._on_sync_done)
+        self._sync_worker.failed.connect(self._on_sync_failed)
+        self._sync_worker.finished.connect(self._sync_thread.quit)
+        self._sync_worker.failed.connect(self._sync_thread.quit)
+        self._sync_thread.finished.connect(self._sync_thread.deleteLater)
+        self._sync_thread.finished.connect(self._sync_worker.deleteLater)
+        self._sync_thread.finished.connect(self._on_sync_thread_finished)
+        self._sync_thread.start()
+
+    def _on_sync_done(self, count: int) -> None:
         self._reload_list()
         QMessageBox.information(self, "Contacts", f"{count} contact(s) added or updated.")
+
+    def _on_sync_failed(self, message: str) -> None:
+        QMessageBox.warning(self, "Contacts", f"Could not sync Google contacts: {message}")
+
+    def _on_sync_thread_finished(self) -> None:
+        self.sync_button.setEnabled(True)
+        self._sync_thread = None
+        self._sync_worker = None
 
     def _on_item_activated(self, item: QTableWidgetItem) -> None:
         self._select_row(item.row())

@@ -65,6 +65,13 @@ def _on_error_occurred(*_args) -> None:
 
 def _start_playback(source_path: Path) -> None:
     global _player, _audio_output
+    if _player is not None:
+        _player.stop()
+        _player.deleteLater()
+        _player = None
+    if _audio_output is not None:
+        _audio_output.deleteLater()
+        _audio_output = None
     player = QMediaPlayer()
     audio_output = QAudioOutput()
     player.setAudioOutput(audio_output)

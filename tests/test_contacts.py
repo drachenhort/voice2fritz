@@ -31,6 +31,21 @@ def test_load_contacts_malformed_json_returns_empty_list(tmp_path):
     assert load_contacts(path) == []
 
 
+def test_load_contacts_skips_entries_missing_keys(tmp_path):
+    path = tmp_path / "contacts.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"name": "Anna Schmidt", "number": "+4917612345678"},
+                {"name": "Missing Number"},
+                "not a dict",
+            ]
+        )
+    )
+
+    assert load_contacts(path) == [Contact(name="Anna Schmidt", number="+4917612345678")]
+
+
 def test_add_contact_appends_and_persists(tmp_path):
     path = tmp_path / "contacts.json"
     save_contacts([Contact(name="Anna Schmidt", number="+4917612345678")], path)
