@@ -160,6 +160,7 @@ class MainWindow(QMainWindow):
 
         self.log_panel.entryActivated.connect(self.number_edit.setText)
         self.contacts_panel.contactSelected.connect(self.number_edit.setText)
+        self.contacts_panel.contactActivated.connect(self._on_contact_activated)
         self.settings_panel.accountSaved.connect(self._on_account_saved)
 
         self.sip_status_led = QLabel()
@@ -298,6 +299,12 @@ class MainWindow(QMainWindow):
             if contact.number == number:
                 return contact.name
         return ""
+
+    def _on_contact_activated(self, number: str) -> None:
+        if self._active_call is not None:
+            return
+        self.number_edit.setText(number)
+        self._on_call_clicked()
 
     def _on_call_clicked(self) -> None:
         number = self.number_edit.text().strip()

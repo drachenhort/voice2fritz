@@ -34,6 +34,7 @@ class _GoogleSyncWorker(QObject):
 
 class ContactsPanel(QWidget):
     contactSelected = Signal(str)
+    contactActivated = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -176,7 +177,9 @@ class ContactsPanel(QWidget):
         self._sync_worker = None
 
     def _on_item_activated(self, item: QTableWidgetItem) -> None:
-        self._select_row(item.row())
+        row = item.row()
+        self._select_row(row)
+        self.contactActivated.emit(self._displayed_contacts[row].number)
 
     def _on_select_clicked(self) -> None:
         row = self.contact_table.currentRow()
