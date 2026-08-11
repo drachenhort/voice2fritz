@@ -36,3 +36,10 @@ class NavRail(QWidget):
 
         layout.addStretch()
         self.buttons["dialpad"].setChecked(True)
+
+    def set_current_index(self, index: int) -> None:
+        """Check the matching rail button without re-emitting pageSelected."""
+        for i, (name, _) in enumerate(_PAGES):
+            if i == index:
+                self.buttons[name].setChecked(True)
+                break

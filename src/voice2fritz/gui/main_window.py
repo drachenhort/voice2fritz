@@ -92,12 +92,18 @@ class MainWindow(QMainWindow):
 
         self.number_edit = QLineEdit()
         self.number_edit.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.contact_name_label = QLabel()
+        self.contact_name_label.setObjectName("contactNameLabel")
+        self.contact_name_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.backspace_button = QPushButton("⌫")
         self.backspace_button.setToolTip("Backspace")
 
         number_row = QHBoxLayout()
         number_row.addWidget(self.number_edit)
+        number_row.addWidget(self.contact_name_label)
         number_row.addWidget(self.backspace_button)
+
+        self.number_edit.textChanged.connect(self._update_contact_name_label)
 
         self.digit_buttons: dict[str, DialpadButton] = {}
         dialpad_grid = QGridLayout()
@@ -212,7 +218,7 @@ class MainWindow(QMainWindow):
         self.tray_icon.show()
 
     def _connect_signals(self) -> None:
-        self.call_button.clicked.connect(self._on_call_clicked)
+        self.call_button.clicked.connect(self._on_call_button_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
         self.backspace_button.clicked.connect(self._on_backspace_clicked)
         self.mute_button.clicked.connect(self._on_mute_clicked)
@@ -300,11 +306,23 @@ class MainWindow(QMainWindow):
                 return contact.name
         return ""
 
+    def _update_contact_name_label(self, number: str) -> None:
+        name = self._contact_name_for(number)
+        self.contact_name_label.setText(f"({name})" if name else "")
+
     def _on_contact_activated(self, number: str) -> None:
         if self._active_call is not None:
             return
+        self.pages.setCurrentIndex(0)
+        self.nav_rail.set_current_index(0)
         self.number_edit.setText(number)
         self._on_call_clicked()
+
+    def _on_call_button_clicked(self) -> None:
+        if self._active_call is not None:
+            self._on_hangup_clicked()
+        else:
+            self._on_call_clicked()
 
     def _on_call_clicked(self) -> None:
         number = self.number_edit.text().strip()
@@ -318,6 +336,7 @@ class MainWindow(QMainWindow):
         self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
         self.call_bar.setVisible(True)
+        self._set_call_button_active(True)
 
         name = self._contact_name_for(number)
         self.call_details.set_active_call(name, number)
@@ -326,6 +345,12 @@ class MainWindow(QMainWindow):
         if self._active_call is not None:
             self.sip_engine.hangup(self._active_call)
         self._on_call_ended()
+
+    def _set_call_button_active(self, active: bool) -> None:
+        self.call_button.setText("✕ HANGUP" if active else "📞 CALL")
+        self.call_button.setProperty("callActive", active)
+        self.call_button.style().unpolish(self.call_button)
+        self.call_button.style().polish(self.call_button)
 
     def _on_mute_clicked(self) -> None:
         if self._active_call is not None:
@@ -343,6 +368,7 @@ class MainWindow(QMainWindow):
         self._set_dtmf_mode(False)
         self.call_details.set_idle()
         self.call_bar.setVisible(False)
+        self._set_call_button_active(False)
         self._log_completed_call()
 
     def _log_completed_call(self) -> None:
@@ -388,6 +414,7 @@ class MainWindow(QMainWindow):
         self.mute_button.setEnabled(True)
         self._set_dtmf_mode(True)
         self.call_bar.setVisible(True)
+        self._set_call_button_active(True)
         name = self._contact_name_for(self._call_number)
         self.call_details.set_active_call(name, self._call_number or "")
 

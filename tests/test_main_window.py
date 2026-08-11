@@ -124,6 +124,26 @@ def test_call_button_ignored_with_whitespace_only_number(qtbot):
     assert engine.calls_made == []
 
 
+def test_call_button_becomes_hangup_during_a_call(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    assert window.call_button.property("callActive") in (None, False)
+
+    window.number_edit.setText("01234567")
+    window.call_button.click()
+
+    assert window.call_button.text() == "✕ HANGUP"
+    assert window.call_button.property("callActive") is True
+
+    window.call_button.click()
+
+    assert len(engine.hangups) == 1
+    assert window.call_button.text() == "📞 CALL"
+    assert window.call_button.property("callActive") is False
+
+
 def test_hangup_button_calls_engine_hangup(qtbot):
     engine = FakeSipEngine()
     window = MainWindow(engine)
@@ -515,6 +535,43 @@ def test_call_log_entry_uses_matching_contact_name(qtbot, monkeypatch):
     window.hangup_button.click()
 
     assert logged[0].name == "Anna Schmidt"
+
+
+def test_activating_a_contact_dials_and_switches_to_dialpad(qtbot, monkeypatch):
+    monkeypatch.setattr(
+        contacts_module,
+        "load_contacts",
+        lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [contacts_module.Contact(name="Anna Schmidt", number="+4917612345678")],
+    )
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.nav_rail.buttons["contacts"].click()
+    window.contacts_panel.contactActivated.emit("+4917612345678")
+
+    assert engine.calls_made == ["+4917612345678"]
+    assert window.pages.currentWidget() is window.pages.widget(0)
+    assert window.nav_rail.buttons["dialpad"].isChecked() is True
+
+
+def test_number_field_shows_matching_contact_name(qtbot, monkeypatch):
+    monkeypatch.setattr(
+        contacts_module,
+        "load_contacts",
+        lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [contacts_module.Contact(name="Anna Schmidt", number="+4917612345678")],
+    )
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.number_edit.setText("+4917612345678")
+
+    assert window.contact_name_label.text() == "(Anna Schmidt)"
+
+    window.number_edit.setText("+4917699999999")
+
+    assert window.contact_name_label.text() == ""
 
 
 def test_contacts_tab_selection_fills_number_field(qtbot):

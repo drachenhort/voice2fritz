@@ -43,6 +43,15 @@ QPushButton#callButton:hover {
     background-color: #36bd59;
 }
 
+QPushButton#callButton[callActive="true"] {
+    background-color: #a83b2f;
+    border: 1px solid #a83b2f;
+}
+
+QPushButton#callButton[callActive="true"]:hover {
+    background-color: #bf4536;
+}
+
 QPushButton:checked {
     background-color: #a83b2f;
 }
@@ -132,6 +141,12 @@ QPushButton#deleteButton {
 
 QPushButton#deleteButton:hover {
     background-color: #bf4536;
+}
+
+QLabel#contactNameLabel {
+    color: #8a8f98;
+    font-style: italic;
+    padding: 0px 4px;
 }
 
 QLabel {
