@@ -4,6 +4,48 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0]
+
+### Added
+- Sidebar navigation: Contacts, Call Log, and Settings are now pages
+  behind a persistent left icon rail instead of two fixed docks plus a
+  modal Settings dialog. Call Details and the Hangup/Mute controls move
+  into a call bar that appears only during a call and stays reachable
+  from any page.
+- Double-clicking a phonebook entry dials it and switches to the
+  Dialpad page.
+- The number field shows "number (Name)" whenever the number matches a
+  contact, live as you type or dial - not only when dialing came from
+  Contacts.
+- The CALL button turns into a red HANGUP button, same position, for
+  the duration of a call.
+
+### Changed
+- Dialpad keys restyled as rounded-square phone keys with the T9
+  letters painted inside each key, scale with the window, and flash an
+  accent colour only on the key being pressed during a call (previously
+  a static border sat on all twelve keys for the whole call).
+
+### Removed
+- ContactsDialog: Contacts opening in a second, modal place on top of
+  the already-docked ContactsPanel no longer makes sense once Contacts
+  is a page of its own.
+
+### Fixed
+- Settings no longer overwrites the stored password when the password
+  field is left empty on save.
+- Placing a call with an empty or whitespace-only number is now a
+  no-op instead of reaching the SIP engine.
+- Google contacts sync runs off the UI thread, so it no longer freezes
+  the window while it's in progress.
+- Hangup now sends a normal BYE (200 OK) instead of a decline response.
+- Re-registering deletes the previous SIP account first, instead of
+  leaking it.
+- Malformed entries in the contacts/call-log JSON files are skipped
+  instead of crashing the loader.
+- The ringtone player is stopped before a new one starts, instead of
+  potentially overlapping.
+
 ## [0.5.1]
 
 ### Fixed
