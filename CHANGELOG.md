@@ -11,6 +11,10 @@ All notable changes to this project are documented in this file.
   back on the chosen speaker - an echo test without placing a call.
   It's unavailable during calls. If the recording is silent, it says
   "Recorded only silence - is the mic muted?" instead of playing it.
+- Outgoing calls play a ringback tone (425 Hz, 1 s on / 4 s off) while
+  the call is being set up, so it's audible that the app is dialing.
+  It stops when the call is answered or ends, or when the network
+  sends its own audio (ringing or an announcement).
 
 ## [0.8.0]
 

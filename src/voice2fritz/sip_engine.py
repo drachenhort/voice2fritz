@@ -24,14 +24,32 @@ def registration_error_message(account: str, status: int, code: int, reason: str
     return f"Authorization failed for {account}: {detail}"
 
 
+# German/European ringback tone: 425 Hz, 1 s on, 4 s off.
+_RINGBACK_FREQ_HZ = 425
+_RINGBACK_ON_MS = 1000
+_RINGBACK_OFF_MS = 4000
+
+
+def should_play_ringback(role: int, state: int) -> bool:
+    """True while our own outgoing call is being set up and the far end hasn't answered."""
+    return role == pj.PJSIP_ROLE_UAC and state in (pj.PJSIP_INV_STATE_CALLING, pj.PJSIP_INV_STATE_EARLY)
+
+
 class SipCall(pj.Call):
     def __init__(self, engine: "SipEngine", account: "SipAccount", call_id: int = pj.PJSUA_INVALID_ID):
         pj.Call.__init__(self, account, call_id)
         self.engine = engine
+        self.has_early_media = False
 
     def onCallState(self, prm):
         info = self.getInfo()
         self.engine.callStateChanged.emit(info.stateText)
+        # Early media (e.g. a network announcement) stops the local tone in onCallMediaState.
+        if should_play_ringback(info.role, info.state):
+            if not self.has_early_media:
+                self.engine.start_ringback()
+        else:
+            self.engine.stop_ringback()
         if info.state == pj.PJSIP_INV_STATE_DISCONNECTED:
             self.engine.callEnded.emit()
 
@@ -39,6 +57,9 @@ class SipCall(pj.Call):
         info = self.getInfo()
         for media_info in info.media:
             if media_info.type == pj.PJMEDIA_TYPE_AUDIO and media_info.status == pj.PJSUA_CALL_MEDIA_ACTIVE:
+                # The far end now supplies audio (ringback, announcement or the call itself).
+                self.has_early_media = True
+                self.engine.stop_ringback()
                 audio_media = self.getAudioMedia(media_info.index)
                 dev_manager = pj.Endpoint.instance().audDevManager()
                 dev_manager.getCaptureDevMedia().startTransmit(audio_media)
@@ -101,6 +122,7 @@ class SipEngine(QObject):
         self._level_meter: _LevelMeterPort | None = None
         self._echo_recorder: pj.AudioMediaRecorder | None = None
         self._echo_player: pj.AudioMediaPlayer | None = None
+        self._ringback: pj.ToneGenerator | None = None
 
     def start(self) -> None:
         self._ep = pj.Endpoint()
@@ -116,6 +138,7 @@ class SipEngine(QObject):
             self.stop_level_monitor()
             self.stop_echo_recording()
             self.stop_echo_playback()
+            self.stop_ringback()
             self._account = None
             self._ep.libDestroy()
             self._ep = None
@@ -292,3 +315,26 @@ class SipEngine(QObject):
             return
         self._echo_player.stopTransmit(self._ep.audDevManager().getPlaybackDevMedia())
         self._echo_player = None
+
+    def start_ringback(self) -> None:
+        if self._ep is None or self._ringback is not None:
+            return
+        tone = pj.ToneDesc()
+        tone.freq1 = _RINGBACK_FREQ_HZ
+        tone.freq2 = 0
+        tone.on_msec = _RINGBACK_ON_MS
+        tone.off_msec = _RINGBACK_OFF_MS
+        tones = pj.ToneDescVector()
+        tones.append(tone)
+        generator = pj.ToneGenerator()
+        generator.createToneGenerator()
+        generator.play(tones, True)
+        generator.startTransmit(self._ep.audDevManager().getPlaybackDevMedia())
+        self._ringback = generator
+
+    def stop_ringback(self) -> None:
+        if self._ringback is None:
+            return
+        self._ringback.stopTransmit(self._ep.audDevManager().getPlaybackDevMedia())
+        self._ringback.stop()
+        self._ringback = None
