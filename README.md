@@ -40,14 +40,15 @@ make python
 ```
 
 `--with-external-pa` plus the `PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO` define
-enable PJSIP's PortAudio backend on top of the default ALSA one. This
-matters in practice: on a PipeWire/PulseAudio desktop, pjsua2's plain ALSA
-enumeration only sees generic aggregate devices (`pulse`, `pipewire`,
-`default`) — individual hardware devices report 0 channels because
-PipeWire owns the card. PortAudio queries through PipeWire/PulseAudio's
-own device list instead, so real per-device names show up (e.g. `Astro
-A50: USB Audio #1 (hw:1,1)`) and are directly selectable in voice2fritz's
-device dropdowns, instead of a single ambiguous `pulse` entry.
+enable PJSIP's PortAudio backend on top of the default ALSA one. It is
+optional: on a PipeWire/PulseAudio desktop, pjsua2's ALSA enumeration only
+sees cryptic names (`hdmi:CARD=HDMI,DEV=1`, `surround41:CARD=A2,DEV=0`, …)
+and misses most hardware, because PipeWire owns the cards. voice2fritz
+therefore asks the sound server itself (`pactl`) for its devices and shows
+them by their readable names (e.g. `Arctis Nova 7 Chat`), the same ones
+your desktop sound settings use. Audio is routed to the chosen device
+through ALSA's `pulse` plugin. Without `pactl`, the dropdowns fall back to
+the raw pjsua2 device list.
 
 Copy the built module into voice2fritz's venv:
 

@@ -1,7 +1,9 @@
+import os
+
 import pjsua2 as pj
 from PySide6.QtCore import QObject, Signal
 
-from voice2fritz.audio import AudioDevice, list_audio_devices
+from voice2fritz.audio import AudioDevice, list_audio_devices, list_pulse_devices
 
 
 class SipCall(pj.Call):
@@ -50,6 +52,7 @@ class SipEngine(QObject):
         self._ep: pj.Endpoint | None = None
         self._account: SipAccount | None = None
         self._host: str = ""
+        self._pulse_device_index: int | None = None
 
     def start(self) -> None:
         self._ep = pj.Endpoint()
@@ -132,15 +135,44 @@ class SipEngine(QObject):
     def list_devices(self) -> list[AudioDevice]:
         if self._ep is None:
             raise RuntimeError("call start() first")
-        raw_devices = self._ep.audDevManager().enumDev2()
-        return list_audio_devices(raw_devices)
+        alsa_devices = list_audio_devices(self._ep.audDevManager().enumDev2())
+        # PipeWire/PulseAudio owns most hardware, so ALSA names are cryptic and incomplete.
+        # Offer the sound server's devices instead and route through ALSA's "pulse" plugin.
+        self._pulse_device_index = next(
+            (d.id for d in alsa_devices if d.name == "pulse" and d.has_input and d.has_output),
+            None,
+        )
+        if self._pulse_device_index is not None:
+            pulse_devices = list_pulse_devices()
+            if pulse_devices:
+                return pulse_devices
+        return alsa_devices
 
-    def select_capture_device(self, device_id: int) -> None:
+    def select_capture_device(self, device_id: int | str) -> None:
         if self._ep is None:
             raise RuntimeError("call start() first")
-        self._ep.audDevManager().setCaptureDev(device_id)
+        if isinstance(device_id, str):
+            self._select_pulse_device("PULSE_SOURCE", device_id)
+        else:
+            self._ep.audDevManager().setCaptureDev(device_id)
 
-    def select_playback_device(self, device_id: int) -> None:
+    def select_playback_device(self, device_id: int | str) -> None:
         if self._ep is None:
             raise RuntimeError("call start() first")
-        self._ep.audDevManager().setPlaybackDev(device_id)
+        if isinstance(device_id, str):
+            self._select_pulse_device("PULSE_SINK", device_id)
+        else:
+            self._ep.audDevManager().setPlaybackDev(device_id)
+
+    def _select_pulse_device(self, env_var: str, node_name: str) -> None:
+        # The pulse plugin reads PULSE_SINK/PULSE_SOURCE whenever the ALSA device is opened.
+        if node_name:
+            os.environ[env_var] = node_name
+        else:
+            os.environ.pop(env_var, None)
+        dev_manager = self._ep.audDevManager()
+        if dev_manager.sndIsActive():
+            # Reopen the device mid-call so the new target takes effect immediately.
+            dev_manager.setNullDev()
+        dev_manager.setCaptureDev(self._pulse_device_index)
+        dev_manager.setPlaybackDev(self._pulse_device_index)

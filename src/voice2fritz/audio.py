@@ -1,3 +1,5 @@
+import json
+import subprocess
 from dataclasses import dataclass
 
 from PySide6.QtWidgets import QComboBox
@@ -5,9 +7,13 @@ from PySide6.QtWidgets import QComboBox
 from voice2fritz import config
 
 
+SYSTEM_DEFAULT_LABEL = "System default"
+
+
 @dataclass
 class AudioDevice:
-    id: int
+    # int: PJSIP device index. str: PipeWire/PulseAudio node name ("" = system default).
+    id: int | str
     name: str
     has_input: bool
     has_output: bool
@@ -23,6 +29,41 @@ def list_audio_devices(raw_devices: list) -> list[AudioDevice]:
         )
         for index, raw in enumerate(raw_devices)
     ]
+
+
+def _pactl_list(kind: str) -> list[dict]:
+    try:
+        output = subprocess.run(
+            ["pactl", "-f", "json", "list", kind],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True,
+        ).stdout
+        return json.loads(output)
+    except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+        return []
+
+
+def parse_pulse_devices(sinks: list[dict], sources: list[dict]) -> list[AudioDevice]:
+    devices = [
+        AudioDevice(id=sink["name"], name=sink.get("description") or sink["name"], has_input=False, has_output=True)
+        for sink in sinks
+    ]
+    devices.extend(
+        AudioDevice(id=source["name"], name=source.get("description") or source["name"], has_input=True, has_output=False)
+        for source in sources
+        if source.get("properties", {}).get("device.class") != "monitor"
+    )
+    return devices
+
+
+def list_pulse_devices() -> list[AudioDevice]:
+    devices = parse_pulse_devices(_pactl_list("sinks"), _pactl_list("sources"))
+    if not devices:
+        return []
+    default = AudioDevice(id="", name=SYSTEM_DEFAULT_LABEL, has_input=True, has_output=True)
+    return [default, *devices]
 
 
 def input_devices(devices: list[AudioDevice]) -> list[AudioDevice]:

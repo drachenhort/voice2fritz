@@ -2,10 +2,12 @@ from dataclasses import dataclass
 
 from PySide6.QtWidgets import QComboBox
 
-from voice2fritz import config
+from voice2fritz import audio, config
 from voice2fritz.audio import (
     AudioDevice,
     list_audio_devices,
+    list_pulse_devices,
+    parse_pulse_devices,
     input_devices,
     output_devices,
     populate_and_restore_devices,
@@ -127,3 +129,38 @@ def test_populate_and_restore_devices_restores_saved_selection(qtbot, monkeypatc
     assert playback_combo.currentText() == "Headset"
     assert engine.selected_capture == 1
     assert engine.selected_playback == 1
+
+
+def test_parse_pulse_devices_uses_descriptions_and_skips_monitors():
+    sinks = [{"name": "Arctis_Chat", "description": "Arctis Nova 7 Chat"}]
+    sources = [
+        {"name": "alsa_input.usb-headset", "description": "Headset Mic", "properties": {"device.class": "sound"}},
+        {"name": "Arctis_Chat.monitor", "description": "Monitor of Arctis Nova 7 Chat", "properties": {"device.class": "monitor"}},
+    ]
+
+    assert parse_pulse_devices(sinks, sources) == [
+        AudioDevice(id="Arctis_Chat", name="Arctis Nova 7 Chat", has_input=False, has_output=True),
+        AudioDevice(id="alsa_input.usb-headset", name="Headset Mic", has_input=True, has_output=False),
+    ]
+
+
+def test_list_pulse_devices_prepends_system_default(monkeypatch):
+    lists = {
+        "sinks": [{"name": "Arctis_Chat", "description": "Arctis Nova 7 Chat"}],
+        "sources": [{"name": "mic", "description": "Headset Mic", "properties": {}}],
+    }
+    monkeypatch.setattr(audio, "_pactl_list", lambda kind: lists[kind])
+
+    devices = list_pulse_devices()
+
+    assert devices[0] == AudioDevice(id="", name="System default", has_input=True, has_output=True)
+    assert [d.name for d in devices[1:]] == ["Arctis Nova 7 Chat", "Headset Mic"]
+
+
+def test_list_pulse_devices_empty_without_pactl(monkeypatch):
+    def missing_pactl(*args, **kwargs):
+        raise FileNotFoundError("pactl")
+
+    monkeypatch.setattr(audio.subprocess, "run", missing_pactl)
+
+    assert list_pulse_devices() == []

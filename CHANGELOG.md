@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Right-clicking a call log entry offers Redial (outgoing calls) or
+  Call back (incoming/missed calls), which dials the number right away.
+- The same menu offers "Save to contacts…" for numbers not yet in the
+  phonebook; it asks for a name and saves the number.
+
+### Changed
+- Mic and Speaker dropdowns list PipeWire/PulseAudio devices by their
+  readable names (e.g. "Arctis Nova 7 Chat") plus a "System default"
+  entry, instead of cryptic ALSA names like `hdmi:CARD=HDMI,DEV=1`.
+  Previously saved device choices don't carry over; pick the devices
+  again once in Settings.
+
 ## [0.6.0]
 
 ### Added
