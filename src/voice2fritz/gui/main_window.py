@@ -509,4 +509,12 @@ class MainWindow(QMainWindow):
         # Report the outcome of the first registration attempt with the new settings.
         self._verifying_account = f"{cfg.username}@{cfg.host}"
         self._verification_timer.start()
-        self.sip_engine.register(cfg.host, cfg.username, password)
+        try:
+            self.sip_engine.register(cfg.host, cfg.username, password)
+        except Exception as exc:
+            account = self._verifying_account
+            self._finish_verification()
+            self._show_registration_error(
+                "Could not register with the new settings. Check host, username and password.",
+                f"Registration failed for {account}: {exc}",
+            )

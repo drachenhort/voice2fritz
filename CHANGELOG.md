@@ -12,6 +12,11 @@ All notable changes to this project are documented in this file.
   the FRITZ!Box accepts the registration, or an error if it fails or
   doesn't answer within 20 seconds.
 
+### Fixed
+- Saving changed account settings never re-registered: replacing the
+  old SIP account crashed (pjsua2 accounts have no delete()), so new
+  credentials were silently ignored until restart.
+
 ## [0.7.0]
 
 ### Added

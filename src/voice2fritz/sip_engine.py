@@ -91,7 +91,7 @@ class SipEngine(QObject):
         if self._ep is None:
             raise RuntimeError("call start() first")
         if self._account is not None:
-            self._account.delete()
+            self._account.shutdown()
             self._account = None
         self._host = host
         self.account_label = f"{username}@{host}"

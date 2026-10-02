@@ -942,3 +942,18 @@ def test_saved_settings_without_response_time_out_with_error(qtbot, monkeypatch)
     window._verification_timer.timeout.emit()
 
     assert window._registration_error_box.informativeText() == "No response from the registrar for user123@fritz.box."
+
+
+def test_saved_settings_that_raise_show_error_immediately(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    def failing_register(host, username, password):
+        raise RuntimeError("invalid URI")
+
+    monkeypatch.setattr(engine, "register", failing_register)
+    _save_account(window, monkeypatch)
+
+    assert window._registration_error_box.informativeText() == "Registration failed for user123@fritz.box: invalid URI"
+    assert not window._verification_timer.isActive()
