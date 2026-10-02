@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.11.0]
+
 ### Added
 - German translation of the whole interface: menus, buttons, dialogs,
   call states and Qt's standard texts. Choose it under Settings ->
