@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.10.0]
+
 ### Added
 - Settings shows which IP address call audio uses and whether it's the
   local network or a VPN (e.g. "192.168.178.26 - Local network
