@@ -1,6 +1,7 @@
 import array
 import math
 import os
+import socket
 
 import pjsua2 as pj
 from PySide6.QtCore import QObject, Signal
@@ -28,6 +29,19 @@ def registration_error_message(account: str, status: int, code: int, reason: str
 _RINGBACK_FREQ_HZ = 425
 _RINGBACK_ON_MS = 1000
 _RINGBACK_OFF_MS = 4000
+
+
+def local_address_toward(host: str, port: int = 5060) -> str | None:
+    """The local IP the OS would use to reach host, or None if it can't be determined.
+
+    Connecting a UDP socket only picks a route; no packet is sent.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect((host, port))
+            return probe.getsockname()[0]
+    except OSError:
+        return None
 
 
 def should_play_ringback(role: int, state: int) -> bool:
@@ -156,6 +170,12 @@ class SipEngine(QObject):
         acc_cfg.regConfig.registrarUri = f"sip:{host}"
         cred = pj.AuthCredInfo("digest", "*", username, 0, password)
         acc_cfg.sipConfig.authCreds.append(cred)
+        # PJSIP advertises the default route's address for audio (SDP). With a VPN as the
+        # default route that address is unreachable for the FRITZ!Box, so calls stay silent.
+        # Bind media to the local address that actually leads to the registrar instead.
+        media_address = local_address_toward(host)
+        if media_address is not None:
+            acc_cfg.mediaConfig.transportConfig.boundAddress = media_address
 
         account = SipAccount(self)
         try:

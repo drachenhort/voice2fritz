@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- You heard nothing on calls - no ringing, no
+  voicemail greeting, no caller - whenever a VPN was the default route.
+  PJSIP advertised the VPN address for audio, so the FRITZ!Box sent it
+  there. Audio is now bound to the local address that reaches the
+  FRITZ!Box.
+
 ## [0.9.0]
 
 ### Added

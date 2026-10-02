@@ -1,4 +1,12 @@
+import pytest
+
 from voice2fritz import sip_engine
+
+
+@pytest.fixture(autouse=True)
+def no_route_lookup(monkeypatch):
+    # register() asks the OS for the route to the host; skip the DNS lookup in tests.
+    monkeypatch.setattr(sip_engine, "local_address_toward", lambda host, port=5060: None)
 
 
 class _FakeAccount:
@@ -35,7 +43,6 @@ def test_reregister_shuts_down_previous_account(monkeypatch):
 
 def test_rejected_account_config_raises_registration_error_with_reason(monkeypatch):
     import pjsua2 as pj
-    import pytest
 
     class _RejectingAccount(_FakeAccount):
         def create(self, acc_cfg):
