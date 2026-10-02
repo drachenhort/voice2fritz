@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.1]
+
 ### Fixed
 - You heard nothing on calls - no ringing, no
   voicemail greeting, no caller - whenever a VPN was the default route.
