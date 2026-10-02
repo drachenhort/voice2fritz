@@ -66,10 +66,11 @@ jobs:
         if: steps.pjsua2-cache.outputs.cache-hit != 'true'
         working-directory: pjproject/pjsip-apps/src/swig/python
         run: |
-          choco install swig --no-progress -y
-          swig -I../../../../pjlib/include -I../../../../pjlib-util/include -I../../../../pjmedia/include `
-               -I../../../../pjsip/include -I../../../../pjnath/include `
-               -c++ -w312 -threads -python -o pjsua2_wrap.cpp ../pjsua2.i
+          # SWIG ships with the windows-latest image. PowerShell splits unquoted
+          # "-I../path" arguments, so build them as quoted strings.
+          $pj = "${{ github.workspace }}/pjproject"
+          $includes = "pjlib", "pjlib-util", "pjmedia", "pjsip", "pjnath" | ForEach-Object { "-I$pj/$_/include" }
+          swig @includes "-c++" "-w312" "-threads" "-python" "-o" "pjsua2_wrap.cpp" "../pjsua2.i"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build the pjsua2 wheel
