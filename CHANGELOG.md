@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.8.0]
+
 ### Added
 - A warning window appears when the FRITZ!Box rejects the SIP login
   (e.g. "maximum number of stale retries exceeded" or 401/403/407),
