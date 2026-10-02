@@ -66,6 +66,16 @@ def list_pulse_devices() -> list[AudioDevice]:
     return [default, *devices]
 
 
+def wav_is_finalized(path: str) -> bool:
+    """True once a WAV recorder has written its header's data size (it does so on close)."""
+    try:
+        with open(path, "rb") as wav:
+            header = wav.read(44)
+    except OSError:
+        return False
+    return len(header) == 44 and header[:4] == b"RIFF" and int.from_bytes(header[40:44], "little") > 0
+
+
 def input_devices(devices: list[AudioDevice]) -> list[AudioDevice]:
     return [d for d in devices if d.has_input]
 

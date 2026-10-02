@@ -91,6 +91,27 @@ class FakeSipEngine(QObject):
     def select_playback_device(self, device_id):
         self.selected_playback = device_id
 
+    def start_level_monitor(self):
+        self.level_monitor_on = True
+
+    def stop_level_monitor(self):
+        self.level_monitor_on = False
+
+    def capture_level(self):
+        return 0.0
+
+    def start_echo_recording(self, path):
+        pass
+
+    def stop_echo_recording(self):
+        pass
+
+    def start_echo_playback(self, path):
+        pass
+
+    def stop_echo_playback(self):
+        pass
+
 
 def test_call_button_calls_engine_make_call_with_entered_number(qtbot):
     engine = FakeSipEngine()

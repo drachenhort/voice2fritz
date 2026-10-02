@@ -1,3 +1,5 @@
+import array
+import math
 import os
 
 import pjsua2 as pj
@@ -43,6 +45,27 @@ class SipCall(pj.Call):
                 audio_media.startTransmit(dev_manager.getPlaybackDevMedia())
 
 
+class _LevelMeterPort(pj.AudioMediaPort):
+    """Sink port on the conference bridge that tracks the peak of the frames sent to it."""
+
+    def __init__(self):
+        pj.AudioMediaPort.__init__(self)
+        self.peak = 0
+
+    def onFrameReceived(self, frame):
+        samples = array.array("h", bytes(frame.buf))
+        if samples:
+            self.peak = max(self.peak, max(samples), -min(samples))
+
+
+def peak_to_level(peak: int) -> float:
+    """Map a 16-bit sample peak to 0..1 on a -60..0 dBFS scale."""
+    if peak <= 0:
+        return 0.0
+    db = 20 * math.log10(min(peak, 32768) / 32768)
+    return max(0.0, (db + 60) / 60)
+
+
 class SipAccount(pj.Account):
     def __init__(self, engine: "SipEngine"):
         pj.Account.__init__(self)
@@ -75,6 +98,9 @@ class SipEngine(QObject):
         self._host: str = ""
         self.account_label: str = ""
         self._pulse_device_index: int | None = None
+        self._level_meter: _LevelMeterPort | None = None
+        self._echo_recorder: pj.AudioMediaRecorder | None = None
+        self._echo_player: pj.AudioMediaPlayer | None = None
 
     def start(self) -> None:
         self._ep = pj.Endpoint()
@@ -87,6 +113,9 @@ class SipEngine(QObject):
 
     def stop(self) -> None:
         if self._ep is not None:
+            self.stop_level_monitor()
+            self.stop_echo_recording()
+            self.stop_echo_playback()
             self._account = None
             self._ep.libDestroy()
             self._ep = None
@@ -203,3 +232,63 @@ class SipEngine(QObject):
             dev_manager.setNullDev()
         dev_manager.setCaptureDev(self._pulse_device_index)
         dev_manager.setPlaybackDev(self._pulse_device_index)
+
+    def start_level_monitor(self) -> None:
+        if self._ep is None:
+            raise RuntimeError("call start() first")
+        if self._level_meter is not None:
+            return
+        fmt = pj.MediaFormatAudio()
+        fmt.type = pj.PJMEDIA_TYPE_AUDIO
+        fmt.clockRate = 16000
+        fmt.channelCount = 1
+        fmt.bitsPerSample = 16
+        fmt.frameTimeUsec = 20000
+        meter = _LevelMeterPort()
+        meter.createPort("level-meter", fmt)
+        self._ep.audDevManager().getCaptureDevMedia().startTransmit(meter)
+        self._level_meter = meter
+
+    def stop_level_monitor(self) -> None:
+        if self._level_meter is None:
+            return
+        self._ep.audDevManager().getCaptureDevMedia().stopTransmit(self._level_meter)
+        self._level_meter = None
+
+    def capture_level(self) -> float:
+        """Mic level (0..1) since the previous call; 0 while the monitor is off."""
+        if self._level_meter is None:
+            return 0.0
+        peak, self._level_meter.peak = self._level_meter.peak, 0
+        return peak_to_level(peak)
+
+    def start_echo_recording(self, path: str) -> None:
+        if self._ep is None:
+            raise RuntimeError("call start() first")
+        self.stop_echo_recording()
+        recorder = pj.AudioMediaRecorder()
+        recorder.createRecorder(path)
+        self._ep.audDevManager().getCaptureDevMedia().startTransmit(recorder)
+        self._echo_recorder = recorder
+
+    def stop_echo_recording(self) -> None:
+        if self._echo_recorder is None:
+            return
+        self._ep.audDevManager().getCaptureDevMedia().stopTransmit(self._echo_recorder)
+        # Dropping the recorder closes the WAV file.
+        self._echo_recorder = None
+
+    def start_echo_playback(self, path: str) -> None:
+        if self._ep is None:
+            raise RuntimeError("call start() first")
+        self.stop_echo_playback()
+        player = pj.AudioMediaPlayer()
+        player.createPlayer(path, pj.PJMEDIA_FILE_NO_LOOP)
+        player.startTransmit(self._ep.audDevManager().getPlaybackDevMedia())
+        self._echo_player = player
+
+    def stop_echo_playback(self) -> None:
+        if self._echo_player is None:
+            return
+        self._echo_player.stopTransmit(self._ep.audDevManager().getPlaybackDevMedia())
+        self._echo_player = None

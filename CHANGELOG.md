@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Settings shows a live mic level bar while the page is open, so you
+  can see the chosen microphone picks you up.
+- "Test mic & speaker" in Settings records 3 seconds and plays them
+  back on the chosen speaker - an echo test without placing a call.
+  It's unavailable during calls.
+
 ## [0.8.0]
 
 ### Added

@@ -418,6 +418,7 @@ class MainWindow(QMainWindow):
         self._on_call_ended()
 
     def _set_call_button_active(self, active: bool) -> None:
+        self.settings_panel.set_call_active(active)
         self.call_button.setText("✕ HANGUP" if active else "📞 CALL")
         self.call_button.setProperty("callActive", active)
         self.call_button.style().unpolish(self.call_button)

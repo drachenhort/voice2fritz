@@ -8,6 +8,7 @@ from voice2fritz.audio import (
     list_audio_devices,
     list_pulse_devices,
     parse_pulse_devices,
+    wav_is_finalized,
     input_devices,
     output_devices,
     populate_and_restore_devices,
@@ -164,3 +165,20 @@ def test_list_pulse_devices_empty_without_pactl(monkeypatch):
     monkeypatch.setattr(audio.subprocess, "run", missing_pactl)
 
     assert list_pulse_devices() == []
+
+
+def _wav_header(data_size):
+    return b"RIFF" + (36 + data_size).to_bytes(4, "little") + b"WAVEfmt " + bytes(20) + b"data" + data_size.to_bytes(4, "little")
+
+
+def test_wav_is_finalized_once_data_size_written(tmp_path):
+    path = tmp_path / "echo.wav"
+    path.write_bytes(_wav_header(0) + bytes(4096))
+    assert wav_is_finalized(str(path)) is False
+
+    path.write_bytes(_wav_header(4096) + bytes(4096))
+    assert wav_is_finalized(str(path)) is True
+
+
+def test_wav_is_finalized_false_for_missing_file(tmp_path):
+    assert wav_is_finalized(str(tmp_path / "missing.wav")) is False

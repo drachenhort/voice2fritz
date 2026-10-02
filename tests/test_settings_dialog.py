@@ -20,6 +20,27 @@ class _FakeSipEngine:
     def select_playback_device(self, device_id):
         self.selected_playback = device_id
 
+    def start_level_monitor(self):
+        self.level_monitor_on = True
+
+    def stop_level_monitor(self):
+        self.level_monitor_on = False
+
+    def capture_level(self):
+        return 0.0
+
+    def start_echo_recording(self, path):
+        pass
+
+    def stop_echo_recording(self):
+        pass
+
+    def start_echo_playback(self, path):
+        pass
+
+    def stop_echo_playback(self):
+        pass
+
 
 @pytest.fixture(autouse=True)
 def no_device_persistence(monkeypatch):
