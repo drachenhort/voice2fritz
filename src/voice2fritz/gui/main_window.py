@@ -165,6 +165,8 @@ class MainWindow(QMainWindow):
         self.nav_rail.pageSelected.connect(self.pages.setCurrentIndex)
 
         self.log_panel.entryActivated.connect(self.number_edit.setText)
+        self.log_panel.dialRequested.connect(self._on_contact_activated)
+        self.log_panel.contactSaved.connect(self.contacts_panel._reload_list)
         self.contacts_panel.contactSelected.connect(self.number_edit.setText)
         self.contacts_panel.contactActivated.connect(self._on_contact_activated)
         self.settings_panel.accountSaved.connect(self._on_account_saved)

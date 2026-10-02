@@ -1,15 +1,18 @@
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from voice2fritz import call_log as call_log_module
+from voice2fritz import contacts as contacts_module
 
 _DIRECTION_ICONS = {
     "outgoing": ("↗", "#2fa84f"),
@@ -61,6 +64,8 @@ def _row_widget(entry: call_log_module.CallLogEntry) -> QWidget:
 
 class CallLogPanel(QWidget):
     entryActivated = Signal(str)
+    dialRequested = Signal(str)
+    contactSaved = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,7 +80,9 @@ class CallLogPanel(QWidget):
         layout.addWidget(self.entry_list)
         layout.addWidget(self.clear_button)
 
+        self.entry_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.entry_list.itemDoubleClicked.connect(self._on_item_activated)
+        self.entry_list.customContextMenuRequested.connect(self._on_context_menu_requested)
         self.clear_button.clicked.connect(self._on_clear_clicked)
 
         self._reload_list()
@@ -97,3 +104,31 @@ class CallLogPanel(QWidget):
     def _on_item_activated(self, item: QListWidgetItem) -> None:
         entry: call_log_module.CallLogEntry = item.data(Qt.ItemDataRole.UserRole)
         self.entryActivated.emit(entry.number)
+
+    def _build_context_menu(self, item: QListWidgetItem) -> QMenu:
+        entry: call_log_module.CallLogEntry = item.data(Qt.ItemDataRole.UserRole)
+        label = "Redial" if entry.direction == "outgoing" else "Call back"
+        menu = QMenu(self)
+        dial_action = menu.addAction(label)
+        dial_action.triggered.connect(lambda: self.dialRequested.emit(entry.number))
+        if not any(contact.number == entry.number for contact in contacts_module.load_contacts()):
+            save_action = menu.addAction("Save to contacts…")
+            save_action.triggered.connect(lambda: self._save_to_contacts(entry))
+        return menu
+
+    def _prompt_contact_name(self, number: str, default_name: str) -> str | None:
+        name, accepted = QInputDialog.getText(self, "Save to contacts", f"Name for {number}:", text=default_name)
+        return name.strip() if accepted else None
+
+    def _save_to_contacts(self, entry: call_log_module.CallLogEntry) -> None:
+        name = self._prompt_contact_name(entry.number, entry.name)
+        if not name:
+            return
+        contacts_module.add_contact(name, entry.number)
+        self.contactSaved.emit()
+
+    def _on_context_menu_requested(self, pos) -> None:
+        item = self.entry_list.itemAt(pos)
+        if item is None:
+            return
+        self._build_context_menu(item).exec(self.entry_list.viewport().mapToGlobal(pos))
