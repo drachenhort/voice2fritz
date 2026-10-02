@@ -1059,3 +1059,18 @@ def test_edit_from_call_log_puts_number_on_dialpad(qtbot):
     assert window.number_edit.text() == "+4930111111"
     assert engine.calls_made == []
 
+
+@pytest.mark.parametrize(
+    ("state", "expected"),
+    [("200 OK", "ok"), ("401 Unauthorized", "rejected"), ("403 Forbidden", "rejected"), ("408 Request Timeout", None)],
+)
+def test_registration_result_reaches_settings_password_hint(qtbot, monkeypatch, state, expected):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    results = []
+    monkeypatch.setattr(window.settings_panel, "set_registration_result", results.append)
+
+    engine.registrationStateChanged.emit(state)
+
+    assert results == [expected]

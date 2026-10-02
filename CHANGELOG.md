@@ -12,6 +12,11 @@ All notable changes to this project are documented in this file.
 - Selecting a call log entry opens an action bar below it: Redial or
   Call back, Edit (puts the number on the dialpad to change before
   calling) and Save to contacts (hidden for numbers already saved).
+- The Settings password field shows the saved password's status instead
+  of looking empty: "Password tested and working" (green) once the
+  FRITZ!Box accepted it, "Saved password was rejected" (red), "Password
+  saved (not tested yet)" or "No password saved". The field is cleared
+  after saving, so the password never stays on screen.
 
 ### Fixed
 - Call log rows no longer draw dark boxes behind their texts.

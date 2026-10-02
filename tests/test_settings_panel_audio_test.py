@@ -233,3 +233,52 @@ def test_language_switch_is_disabled_during_call(panel):
     panel.set_call_active(False)
     assert panel.language_combo.isEnabled()
 
+
+def _panel_with_saved_password(qtbot, monkeypatch, saved):
+    monkeypatch.setattr(config, "get_password", lambda username: "secret" if saved else None)
+    panel = SettingsPanel(_RecordingEngine())
+    qtbot.addWidget(panel)
+    panel.username_edit.setText("microsip")
+    return panel
+
+
+def test_password_hint_without_saved_password(qtbot, monkeypatch):
+    panel = _panel_with_saved_password(qtbot, monkeypatch, saved=False)
+    assert panel.password_edit.placeholderText() == "No password saved"
+
+
+def test_password_hint_saved_but_untested(qtbot, monkeypatch):
+    panel = _panel_with_saved_password(qtbot, monkeypatch, saved=True)
+    assert panel.password_edit.placeholderText() == "Password saved (not tested yet)"
+    assert panel.password_edit.text() == ""
+
+
+def test_password_hint_after_successful_registration(qtbot, monkeypatch):
+    panel = _panel_with_saved_password(qtbot, monkeypatch, saved=True)
+    panel.set_registration_result("ok")
+    assert panel.password_edit.placeholderText() == "Password tested and working"
+    assert "#2fa84f" in panel.password_edit.styleSheet()
+
+
+def test_password_hint_after_rejected_registration(qtbot, monkeypatch):
+    panel = _panel_with_saved_password(qtbot, monkeypatch, saved=True)
+    panel.set_registration_result("rejected")
+    assert panel.password_edit.placeholderText() == "Saved password was rejected - enter it again"
+    assert "#d0453a" in panel.password_edit.styleSheet()
+
+
+def test_saving_a_password_clears_the_field_and_resets_status(qtbot, monkeypatch):
+    stored = {}
+    monkeypatch.setattr(config, "save_config", lambda cfg, path=config.DEFAULT_CONFIG_PATH: None)
+    monkeypatch.setattr(config, "save_google_sync_overwrites_local", lambda value, path=config.DEFAULT_CONFIG_PATH: None)
+    monkeypatch.setattr(config, "set_password", lambda username, password: stored.update({username: password}))
+    panel = _panel_with_saved_password(qtbot, monkeypatch, saved=True)
+    panel.set_registration_result("ok")
+    panel.host_edit.setText("192.168.178.1")
+    panel.password_edit.setText("microsip1")
+
+    panel.save_button.click()
+
+    assert stored == {"microsip": "microsip1"}
+    assert panel.password_edit.text() == ""
+    assert panel.password_edit.placeholderText() == "Password saved (not tested yet)"

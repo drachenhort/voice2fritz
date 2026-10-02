@@ -40,6 +40,7 @@ _KEY_FLASH_MS = 120
 _REGISTRATION_VERIFY_TIMEOUT_MS = 20_000
 # main() relaunches the app when the event loop exits with this code.
 RESTART_EXIT_CODE = 75
+_AUTH_REJECTED_CODES = {"401", "403", "407"}
 
 
 class DialpadButton(QPushButton):
@@ -305,6 +306,13 @@ class MainWindow(QMainWindow):
 
     def _on_registration_state_changed(self, text: str) -> None:
         self._set_sip_status_led(is_ok=(text == "200 OK"), text=text)
+        if text.startswith("2"):
+            self.settings_panel.set_registration_result("ok")
+        elif text.split(" ", 1)[0] in _AUTH_REJECTED_CODES:
+            self.settings_panel.set_registration_result("rejected")
+        else:
+            # Unreachable or timed out: says nothing about the password.
+            self.settings_panel.set_registration_result(None)
 
     def _on_registration_state_changed_verify(self, text: str) -> None:
         if self._verifying_account is None:

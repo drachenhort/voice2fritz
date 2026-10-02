@@ -42,6 +42,8 @@ class SettingsPanel(QWidget):
         self.username_edit = QLineEdit()
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        # None until the FRITZ!Box has answered a registration with the saved password.
+        self._password_status: str | None = None
         self.save_button = QPushButton(tr("Save"))
         self.save_button.setObjectName("addButton")
         self.google_priority_checkbox = QCheckBox(tr("Google sync overwrites local contacts with the same name"))
@@ -95,6 +97,9 @@ class SettingsPanel(QWidget):
         self.save_button.clicked.connect(self._on_save)
 
         populate_and_restore_devices(self.sip_engine, self.capture_combo, self.speaker_combo)
+
+        self.username_edit.textChanged.connect(self._update_password_hint)
+        self._update_password_hint()
 
         self.capture_combo.currentIndexChanged.connect(self._on_capture_changed)
         self.speaker_combo.currentIndexChanged.connect(self._on_playback_changed)
@@ -226,10 +231,34 @@ class SettingsPanel(QWidget):
         config.save_config(cfg)
         if self.password_edit.text():
             config.set_password(cfg.username, self.password_edit.text())
+            # Never leave the password on screen; the hint reports its status instead.
+            self.password_edit.clear()
+        self._password_status = None
+        self._update_password_hint()
         config.save_google_sync_overwrites_local(self.google_priority_checkbox.isChecked())
         self.accountSaved.emit(cfg)
         # Saving re-registers, which may pick a different local address.
         self.update_call_audio_ip()
+
+    def set_registration_result(self, status: str | None) -> None:
+        """Report how the FRITZ!Box answered the saved password: "ok", "rejected" or None (unknown)."""
+        self._password_status = status
+        self._update_password_hint()
+
+    def _update_password_hint(self) -> None:
+        username = self.username_edit.text()
+        saved = bool(username) and bool(config.get_password(username))
+        if not saved:
+            hint, color = tr("No password saved"), None
+        elif self._password_status == "ok":
+            hint, color = tr("Password tested and working"), "#2fa84f"
+        elif self._password_status == "rejected":
+            hint, color = tr("Saved password was rejected - enter it again"), "#d0453a"
+        else:
+            hint, color = tr("Password saved (not tested yet)"), None
+        self.password_edit.setPlaceholderText(hint)
+        # A palette colour would lose against the app stylesheet; set it in QSS instead.
+        self.password_edit.setStyleSheet(f"QLineEdit {{ placeholder-text-color: {color}; }}" if color else "")
 
     def _on_language_changed(self, index: int) -> None:
         language = self.language_combo.itemData(index)
