@@ -36,6 +36,7 @@ def default_close_dialog_choice(monkeypatch):
 
 class FakeSipEngine(QObject):
     registrationStateChanged = Signal(str)
+    registrationFailed = Signal(str)
     incomingCall = Signal(object)
     callStateChanged = Signal(str)
     callEnded = Signal()
@@ -833,3 +834,42 @@ def test_keyboard_press_flashes_the_matching_key(qtbot):
     assert window.number_edit.text() == "5"
 
     qtbot.waitUntil(lambda: window.digit_buttons["5"].isDown() is False, timeout=1000)
+
+
+def test_registration_failure_opens_error_box_with_message(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    message = "Authorization failed for microsip@fritz.box: Maximum number of stale retries exceeded"
+    engine.registrationFailed.emit(message)
+
+    box = window._registration_error_box
+    assert box.isVisible()
+    assert box.informativeText() == message
+
+
+def test_repeated_registration_failure_reuses_open_box(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    engine.registrationFailed.emit("first")
+    first_box = window._registration_error_box
+    engine.registrationFailed.emit("second")
+
+    assert window._registration_error_box is first_box
+    assert first_box.informativeText() == "second"
+
+
+def test_registration_error_box_open_settings_switches_page(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    engine.registrationFailed.emit("Authorization failed")
+    box = window._registration_error_box
+    settings_button = next(b for b in box.buttons() if b.text() == "Open Settings")
+    settings_button.click()
+
+    assert window.pages.currentWidget() is window.settings_panel

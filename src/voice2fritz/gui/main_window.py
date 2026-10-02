@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
         self.backspace_button.clicked.connect(self._on_backspace_clicked)
         self.mute_button.clicked.connect(self._on_mute_clicked)
         self.sip_engine.registrationStateChanged.connect(self._on_registration_state_changed)
+        self.sip_engine.registrationFailed.connect(self._on_registration_failed)
         self.sip_engine.callStateChanged.connect(self._on_call_state_changed)
         self.sip_engine.callEnded.connect(self._on_call_ended)
         self.sip_engine.incomingCall.connect(self._on_incoming_call)
@@ -292,6 +293,30 @@ class MainWindow(QMainWindow):
 
     def _on_registration_state_changed(self, text: str) -> None:
         self._set_sip_status_led(is_ok=(text == "200 OK"), text=text)
+
+    def _on_registration_failed(self, message: str) -> None:
+        # PJSIP keeps retrying registration; reuse the open box instead of stacking new ones.
+        box = getattr(self, "_registration_error_box", None)
+        if box is not None and box.isVisible():
+            box.setInformativeText(message)
+            return
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("SIP registration failed")
+        box.setText("The FRITZ!Box rejected the login. Check the username and password in Settings.")
+        box.setInformativeText(message)
+        settings_button = box.addButton("Open Settings", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(QMessageBox.StandardButton.Close)
+        settings_button.clicked.connect(self._show_settings_page)
+        self._registration_error_box = box
+        box.open()
+
+    def _show_settings_page(self) -> None:
+        self.showNormal()
+        self.activateWindow()
+        settings_index = self.pages.indexOf(self.settings_panel)
+        self.pages.setCurrentIndex(settings_index)
+        self.nav_rail.set_current_index(settings_index)
 
     def _on_call_state_changed(self, text: str) -> None:
         self.call_details.set_state_text(text)

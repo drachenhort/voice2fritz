@@ -5,6 +5,18 @@ from PySide6.QtCore import QObject, Signal
 
 from voice2fritz.audio import AudioDevice, list_audio_devices, list_pulse_devices
 
+# Not exported by the pjsua2 bindings: PJSIP_ERRNO_START_PJSIP + 111.
+PJSIP_EAUTHSTALECOUNT = 171111
+_AUTH_FAILURE_CODES = {401, 403, 407}
+
+
+def registration_error_message(account: str, status: int, code: int, reason: str, status_text: str) -> str | None:
+    """Describe a registration that failed authorization, or None if it didn't."""
+    if status != PJSIP_EAUTHSTALECOUNT and code not in _AUTH_FAILURE_CODES:
+        return None
+    detail = status_text if status != 0 else f"{code} {reason}"
+    return f"Authorization failed for {account}: {detail}"
+
 
 class SipCall(pj.Call):
     def __init__(self, engine: "SipEngine", account: "SipAccount", call_id: int = pj.PJSUA_INVALID_ID):
@@ -35,6 +47,10 @@ class SipAccount(pj.Account):
     def onRegState(self, prm):
         info = self.getInfo()
         self.engine.registrationStateChanged.emit(f"{info.regStatus} {info.regStatusText}")
+        status_text = pj.Endpoint.instance().utilStrError(prm.status) if prm.status != 0 else ""
+        message = registration_error_message(self.engine.account_label, prm.status, prm.code, prm.reason, status_text)
+        if message is not None:
+            self.engine.registrationFailed.emit(message)
 
     def onIncomingCall(self, prm):
         call = SipCall(self.engine, self, call_id=prm.callId)
@@ -43,6 +59,7 @@ class SipAccount(pj.Account):
 
 class SipEngine(QObject):
     registrationStateChanged = Signal(str)
+    registrationFailed = Signal(str)
     incomingCall = Signal(object)
     callStateChanged = Signal(str)
     callEnded = Signal()
@@ -52,6 +69,7 @@ class SipEngine(QObject):
         self._ep: pj.Endpoint | None = None
         self._account: SipAccount | None = None
         self._host: str = ""
+        self.account_label: str = ""
         self._pulse_device_index: int | None = None
 
     def start(self) -> None:
@@ -76,6 +94,7 @@ class SipEngine(QObject):
             self._account.delete()
             self._account = None
         self._host = host
+        self.account_label = f"{username}@{host}"
         acc_cfg = pj.AccountConfig()
         acc_cfg.idUri = f"sip:{username}@{host}"
         acc_cfg.regConfig.registrarUri = f"sip:{host}"
