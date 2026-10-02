@@ -10,6 +10,10 @@ PJSIP_EAUTHSTALECOUNT = 171111
 _AUTH_FAILURE_CODES = {401, 403, 407}
 
 
+class RegistrationError(RuntimeError):
+    """The account could not be set up, e.g. because the host makes an invalid SIP URI."""
+
+
 def registration_error_message(account: str, status: int, code: int, reason: str, status_text: str) -> str | None:
     """Describe a registration that failed authorization, or None if it didn't."""
     if status != PJSIP_EAUTHSTALECOUNT and code not in _AUTH_FAILURE_CODES:
@@ -101,8 +105,12 @@ class SipEngine(QObject):
         cred = pj.AuthCredInfo("digest", "*", username, 0, password)
         acc_cfg.sipConfig.authCreds.append(cred)
 
-        self._account = SipAccount(self)
-        self._account.create(acc_cfg)
+        account = SipAccount(self)
+        try:
+            account.create(acc_cfg)
+        except pj.Error as exc:
+            raise RegistrationError(exc.reason) from exc
+        self._account = account
 
     def make_call(self, number: str) -> SipCall:
         if self._account is None:

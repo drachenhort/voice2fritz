@@ -16,6 +16,13 @@ All notable changes to this project are documented in this file.
 - Saving changed account settings never re-registered: replacing the
   old SIP account crashed (pjsua2 accounts have no delete()), so new
   credentials were silently ignored until restart.
+- Google contacts sync could crash the app intermittently once the sync
+  finished: its worker object was freed twice, from two threads.
+- The window now identifies itself as "voice2fritz" to the desktop, so
+  the taskbar no longer groups it with other Python apps.
+- A saved host that can't form a valid SIP address (e.g. empty or
+  containing spaces) crashed the app at startup; it now opens the
+  registration error window instead.
 
 ## [0.7.0]
 

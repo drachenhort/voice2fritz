@@ -505,16 +505,21 @@ class MainWindow(QMainWindow):
             popup.deleteLater()
 
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:
+        self.register_account(cfg, verify=True)
+
+    def register_account(self, cfg: config.AccountConfig, verify: bool = False) -> None:
+        """Register with the FRITZ!Box; with verify, also report success or failure in a dialog."""
         password = config.get_password(cfg.username) or ""
-        # Report the outcome of the first registration attempt with the new settings.
-        self._verifying_account = f"{cfg.username}@{cfg.host}"
-        self._verification_timer.start()
+        account = f"{cfg.username}@{cfg.host}"
+        if verify:
+            self._verifying_account = account
+            self._verification_timer.start()
         try:
             self.sip_engine.register(cfg.host, cfg.username, password)
         except Exception as exc:
-            account = self._verifying_account
             self._finish_verification()
+            settings = "new" if verify else "saved"
             self._show_registration_error(
-                "Could not register with the new settings. Check host, username and password.",
+                f"Could not register with the {settings} settings. Check host, username and password.",
                 f"Registration failed for {account}: {exc}",
             )

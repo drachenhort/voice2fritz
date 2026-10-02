@@ -15,6 +15,7 @@ ICON_PATH = Path(__file__).parent / "gui" / "resources" / "icon.png"
 
 def main() -> None:
     app = QApplication(sys.argv)
+    app.setDesktopFileName("voice2fritz")
     app.setStyleSheet(theme.DARK_STYLESHEET)
     app.setWindowIcon(QIcon(str(ICON_PATH)))
     app.setQuitOnLastWindowClosed(False)
@@ -33,8 +34,7 @@ def main() -> None:
     window = MainWindow(sip_engine)
     window.show()
 
-    password = config.get_password(account.username) or ""
-    sip_engine.register(account.host, account.username, password)
+    window.register_account(account)
 
     exit_code = app.exec()
     sip_engine.stop()

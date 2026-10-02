@@ -957,3 +957,34 @@ def test_saved_settings_that_raise_show_error_immediately(qtbot, monkeypatch):
 
     assert window._registration_error_box.informativeText() == "Registration failed for user123@fritz.box: invalid URI"
     assert not window._verification_timer.isActive()
+
+
+def test_startup_registration_failure_shows_error_without_verifying(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    def failing_register(host, username, password):
+        raise RuntimeError("Invalid URI (PJSIP_EINVALIDURI)")
+
+    monkeypatch.setattr(engine, "register", failing_register)
+    monkeypatch.setattr(config_module, "get_password", lambda username: "secret")
+    window.register_account(config_module.AccountConfig(host="bad host", username="user123"))
+
+    box = window._registration_error_box
+    assert box.text().startswith("Could not register with the saved settings.")
+    assert box.informativeText() == "Registration failed for user123@bad host: Invalid URI (PJSIP_EINVALIDURI)"
+    assert not window._verification_timer.isActive()
+
+
+def test_startup_registration_success_shows_no_confirmation(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    monkeypatch.setattr(config_module, "get_password", lambda username: "secret")
+    window.register_account(config_module.AccountConfig(host="fritz.box", username="user123"))
+    engine.registrationStateChanged.emit("200 OK")
+
+    assert engine.registrations == [("fritz.box", "user123", "secret")]
+    assert not hasattr(window, "_verification_success_box")
