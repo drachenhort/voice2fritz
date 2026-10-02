@@ -20,6 +20,8 @@ class _FakeSipEngine:
     def select_playback_device(self, device_id):
         self.selected_playback = device_id
 
+    media_address = None
+
     def start_level_monitor(self):
         self.level_monitor_on = True
 

@@ -21,6 +21,8 @@ class _RecordingEngine:
     def select_playback_device(self, device_id):
         pass
 
+    media_address = None
+
     def start_level_monitor(self):
         self.events.append("monitor on")
 
@@ -180,3 +182,33 @@ def test_hiding_panel_during_call_keeps_button_disabled(panel):
 )
 def test_peak_to_level_uses_minus_60_to_0_dbfs(peak, level):
     assert peak_to_level(peak) == level
+
+
+def test_call_audio_ip_shows_not_registered_without_address(panel):
+    panel.update_call_audio_ip()
+    assert panel.call_audio_ip_label.text() == "Not registered yet"
+
+
+def test_call_audio_ip_shows_address_kind_and_interface(panel, monkeypatch):
+    from voice2fritz.network import AddressInfo
+
+    monkeypatch.setattr(
+        settings_panel_module, "describe_address", lambda address: AddressInfo(address, "enp34s0", "Local network")
+    )
+    panel.sip_engine.media_address = "192.168.178.26"
+    panel.update_call_audio_ip()
+
+    assert panel.call_audio_ip_label.text() == "192.168.178.26 - Local network (enp34s0)"
+
+
+def test_call_audio_ip_over_vpn_is_flagged(panel, monkeypatch):
+    from voice2fritz.network import AddressInfo
+
+    monkeypatch.setattr(
+        settings_panel_module, "describe_address", lambda address: AddressInfo(address, "Reykjavic-IS", "VPN")
+    )
+    panel.sip_engine.media_address = "100.64.2.166"
+    panel.update_call_audio_ip()
+
+    assert panel.call_audio_ip_label.text() == "100.64.2.166 - VPN (Reykjavic-IS)"
+    assert "VPN" in panel.call_audio_ip_label.toolTip()

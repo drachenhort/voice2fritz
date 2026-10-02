@@ -132,6 +132,7 @@ class SipEngine(QObject):
         self._account: SipAccount | None = None
         self._host: str = ""
         self.account_label: str = ""
+        self.media_address: str | None = None
         self._pulse_device_index: int | None = None
         self._level_meter: _LevelMeterPort | None = None
         self._echo_recorder: pj.AudioMediaRecorder | None = None
@@ -174,6 +175,7 @@ class SipEngine(QObject):
         # default route that address is unreachable for the FRITZ!Box, so calls stay silent.
         # Bind media to the local address that actually leads to the registrar instead.
         media_address = local_address_toward(host)
+        self.media_address = media_address
         if media_address is not None:
             acc_cfg.mediaConfig.transportConfig.boundAddress = media_address
 

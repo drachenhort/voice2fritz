@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from voice2fritz import config
+from voice2fritz.network import describe_address
 from voice2fritz.audio import populate_and_restore_devices, wav_is_finalized, wav_peak
 
 _LEVEL_POLL_MS = 100
@@ -74,6 +75,9 @@ class SettingsPanel(QWidget):
         form.addRow("Speaker", self.speaker_combo)
         form.addRow("Audio test", echo_test_row)
 
+        self.call_audio_ip_label = QLabel()
+        form.addRow("Call audio IP", self.call_audio_ip_label)
+
         layout = QVBoxLayout(self)
         layout.addLayout(form)
         layout.addWidget(self.google_priority_checkbox)
@@ -100,6 +104,7 @@ class SettingsPanel(QWidget):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        self.update_call_audio_ip()
         # Only hold the mic open while the settings page is on screen.
         self.sip_engine.start_level_monitor()
         self._level_timer.start()
@@ -110,6 +115,24 @@ class SettingsPanel(QWidget):
         self.sip_engine.stop_level_monitor()
         self.mic_level_bar.setValue(0)
         self._abort_echo_test()
+
+    def update_call_audio_ip(self) -> None:
+        address = self.sip_engine.media_address
+        if address is None:
+            self.call_audio_ip_label.setText("Not registered yet")
+            self.call_audio_ip_label.setStyleSheet("color: #8a8f98;")
+            self.call_audio_ip_label.setToolTip("")
+            return
+        info = describe_address(address)
+        interface = f" ({info.interface})" if info.interface else ""
+        self.call_audio_ip_label.setText(f"{info.address} - {info.kind}{interface}")
+        if info.kind == "VPN":
+            # The FRITZ!Box is on the LAN; audio routed through a VPN usually doesn't arrive.
+            self.call_audio_ip_label.setStyleSheet("color: #d08a2c;")
+            self.call_audio_ip_label.setToolTip("Call audio goes through the VPN; the FRITZ!Box may not reach it.")
+        else:
+            self.call_audio_ip_label.setStyleSheet("")
+            self.call_audio_ip_label.setToolTip("Local address the FRITZ!Box sends call audio to.")
 
     def _update_mic_level(self) -> None:
         self.mic_level_bar.setValue(round(self.sip_engine.capture_level() * 100))
@@ -193,6 +216,8 @@ class SettingsPanel(QWidget):
             config.set_password(cfg.username, self.password_edit.text())
         config.save_google_sync_overwrites_local(self.google_priority_checkbox.isChecked())
         self.accountSaved.emit(cfg)
+        # Saving re-registers, which may pick a different local address.
+        self.update_call_audio_ip()
 
     def _on_capture_changed(self, index: int) -> None:
         if index >= 0:
