@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.12.0]
+
 ### Added
 - Experimental Windows build: a GitHub workflow compiles pjproject with
   Visual Studio, packages the app with PyInstaller and attaches

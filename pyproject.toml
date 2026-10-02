@@ -1,6 +1,6 @@
 [project]
 name = "voice2fritz"
-version = "0.11.0"
+version = "0.12.0"
 description = "SIP softphone for FRITZ!Box"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
