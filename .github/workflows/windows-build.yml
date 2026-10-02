@@ -107,6 +107,21 @@ jobs:
             packaging/windows/launcher.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Smoke test the packaged executable
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          # No config exists on the runner, so the app opens its first-run settings
+          # dialog and waits. Still running after 15 s means it started without crashing.
+          $app = Start-Process -FilePath dist/voice2fritz/voice2fritz.exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($app.HasExited) {
+            Write-Error "voice2fritz.exe exited during startup with code $($app.ExitCode)"
+            exit 1
+          }
+          Stop-Process -Id $app.Id -Force
+          Write-Output "voice2fritz.exe started and kept running"
+
       - name: Package the zip
         id: package
         run: |
