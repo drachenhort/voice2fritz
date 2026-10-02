@@ -212,3 +212,22 @@ def test_call_audio_ip_over_vpn_is_flagged(panel, monkeypatch):
 
     assert panel.call_audio_ip_label.text() == "100.64.2.166 - VPN (Reykjavic-IS)"
     assert "VPN" in panel.call_audio_ip_label.toolTip()
+
+
+def test_language_change_saves_and_signals(panel, monkeypatch, qtbot):
+    saved = []
+    monkeypatch.setattr(config, "save_language", lambda value, path=config.DEFAULT_CONFIG_PATH: saved.append(value))
+
+    with qtbot.waitSignal(panel.languageChanged, timeout=1000) as blocker:
+        panel.language_combo.setCurrentIndex(panel.language_combo.findData("de"))
+
+    assert saved == ["de"]
+    assert blocker.args == ["de"]
+
+
+def test_language_switch_is_disabled_during_call(panel):
+    panel.set_call_active(True)
+    assert not panel.language_combo.isEnabled()
+
+    panel.set_call_active(False)
+    assert panel.language_combo.isEnabled()

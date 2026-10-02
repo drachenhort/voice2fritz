@@ -7,6 +7,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from voice2fritz.i18n import tr
+
 _AVATAR_COLORS = [
     "#e07a5f", "#3d5a80", "#81b29a", "#f2cc8f",
     "#9b5de5", "#00bbf9", "#f15bb5", "#00f5d4",
@@ -29,7 +31,7 @@ class IncomingCallPopup(QWidget):
 
     def __init__(self, name: str, number: str, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Incoming call")
+        self.setWindowTitle(tr("Incoming call"))
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         avatar_text = _initials(name) if name else "📞"
@@ -50,9 +52,9 @@ class IncomingCallPopup(QWidget):
         self.number_label.setStyleSheet("color: #8a8f98;")
         self.number_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.answer_button = QPushButton("📞 Answer")
+        self.answer_button = QPushButton(tr("📞 Answer"))
         self.answer_button.setObjectName("callButton")
-        self.decline_button = QPushButton("✕ Decline")
+        self.decline_button = QPushButton(tr("✕ Decline"))
         self.decline_button.setObjectName("deleteButton")
 
         button_row = QHBoxLayout()

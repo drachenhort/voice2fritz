@@ -7,6 +7,7 @@ import pjsua2 as pj
 from PySide6.QtCore import QObject, Signal
 
 from voice2fritz.audio import AudioDevice, list_audio_devices, list_pulse_devices
+from voice2fritz.i18n import tr
 
 # Not exported by the pjsua2 bindings: PJSIP_ERRNO_START_PJSIP + 111.
 PJSIP_EAUTHSTALECOUNT = 171111
@@ -22,7 +23,7 @@ def registration_error_message(account: str, status: int, code: int, reason: str
     if status != PJSIP_EAUTHSTALECOUNT and code not in _AUTH_FAILURE_CODES:
         return None
     detail = status_text if status != 0 else f"{code} {reason}"
-    return f"Authorization failed for {account}: {detail}"
+    return tr("Authorization failed for {account}: {detail}", account=account, detail=detail)
 
 
 # German/European ringback tone: 425 Hz, 1 s on, 4 s off.

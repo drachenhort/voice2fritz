@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from PySide6.QtWidgets import QComboBox
 
 from voice2fritz import config
+from voice2fritz.i18n import tr
 
 
 SYSTEM_DEFAULT_LABEL = "System default"
@@ -64,7 +65,7 @@ def list_pulse_devices() -> list[AudioDevice]:
     devices = parse_pulse_devices(_pactl_list("sinks"), _pactl_list("sources"))
     if not devices:
         return []
-    default = AudioDevice(id="", name=SYSTEM_DEFAULT_LABEL, has_input=True, has_output=True)
+    default = AudioDevice(id="", name=tr(SYSTEM_DEFAULT_LABEL), has_input=True, has_output=True)
     return [default, *devices]
 
 

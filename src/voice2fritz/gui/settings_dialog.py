@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout
 
 from voice2fritz import config
 from voice2fritz.gui.settings_panel import SettingsPanel
+from voice2fritz.i18n import tr
 
 
 class SettingsDialog(QDialog):
@@ -10,7 +11,7 @@ class SettingsDialog(QDialog):
 
     def __init__(self, sip_engine, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("FRITZ!Box Account")
+        self.setWindowTitle(tr("FRITZ!Box Account"))
 
         self.panel = SettingsPanel(sip_engine)
 

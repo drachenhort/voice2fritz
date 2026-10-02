@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from voice2fritz import call_log as call_log_module
 from voice2fritz import contacts as contacts_module
+from voice2fritz.i18n import tr
 
 _DIRECTION_ICONS = {
     "outgoing": ("↗", "#2fa84f"),
@@ -71,7 +72,7 @@ class CallLogPanel(QWidget):
         super().__init__(parent)
 
         self.entry_list = QListWidget()
-        self.clear_button = QPushButton("Clear")
+        self.clear_button = QPushButton(tr("Clear"))
         self.clear_button.setObjectName("deleteButton")
 
         layout = QVBoxLayout(self)
@@ -107,17 +108,19 @@ class CallLogPanel(QWidget):
 
     def _build_context_menu(self, item: QListWidgetItem) -> QMenu:
         entry: call_log_module.CallLogEntry = item.data(Qt.ItemDataRole.UserRole)
-        label = "Redial" if entry.direction == "outgoing" else "Call back"
+        label = tr("Redial") if entry.direction == "outgoing" else tr("Call back")
         menu = QMenu(self)
         dial_action = menu.addAction(label)
         dial_action.triggered.connect(lambda: self.dialRequested.emit(entry.number))
         if not any(contact.number == entry.number for contact in contacts_module.load_contacts()):
-            save_action = menu.addAction("Save to contacts…")
+            save_action = menu.addAction(tr("Save to contacts…"))
             save_action.triggered.connect(lambda: self._save_to_contacts(entry))
         return menu
 
     def _prompt_contact_name(self, number: str, default_name: str) -> str | None:
-        name, accepted = QInputDialog.getText(self, "Save to contacts", f"Name for {number}:", text=default_name)
+        name, accepted = QInputDialog.getText(
+            self, tr("Save to contacts"), tr("Name for {number}:", number=number), text=default_name
+        )
         return name.strip() if accepted else None
 
     def _save_to_contacts(self, entry: call_log_module.CallLogEntry) -> None:

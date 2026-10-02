@@ -1,12 +1,14 @@
+import os
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
-from voice2fritz import config
+from voice2fritz import config, i18n
 from voice2fritz.gui import theme
-from voice2fritz.gui.main_window import MainWindow
+from voice2fritz.gui.main_window import RESTART_EXIT_CODE, MainWindow
 from voice2fritz.gui.settings_dialog import SettingsDialog
 from voice2fritz.sip_engine import SipEngine
 
@@ -16,6 +18,15 @@ ICON_PATH = Path(__file__).parent / "gui" / "resources" / "icon.png"
 def main() -> None:
     app = QApplication(sys.argv)
     app.setDesktopFileName("voice2fritz")
+
+    i18n.set_language(config.load_language())
+    if i18n.current_language() != "en":
+        # Qt's own texts: standard dialog buttons, text field context menus.
+        qt_translator = QTranslator(app)
+        translations = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        if qt_translator.load(QLocale(i18n.current_language()), "qtbase", "_", translations):
+            app.installTranslator(qt_translator)
+
     app.setStyleSheet(theme.DARK_STYLESHEET)
     app.setWindowIcon(QIcon(str(ICON_PATH)))
     app.setQuitOnLastWindowClosed(False)
@@ -38,6 +49,8 @@ def main() -> None:
 
     exit_code = app.exec()
     sip_engine.stop()
+    if exit_code == RESTART_EXIT_CODE:
+        os.execv(sys.executable, [sys.executable, "-m", "voice2fritz.main", *sys.argv[1:]])
     sys.exit(exit_code)
 
 

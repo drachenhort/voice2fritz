@@ -5,6 +5,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from voice2fritz.i18n import tr
+
 
 class CallDetailsPanel(QWidget):
     def __init__(self, parent=None):
@@ -33,14 +35,14 @@ class CallDetailsPanel(QWidget):
 
     def set_active_call(self, name: str, number: str) -> None:
         self.name_label.setText(name if name else number)
-        self.state_label.setText("Active")
+        self.state_label.setText(tr("Active"))
         self._seconds = 0
         self.duration_label.setText("0:00")
         self._timer.start()
 
     def set_idle(self) -> None:
         self._timer.stop()
-        self.name_label.setText("No active call")
+        self.name_label.setText(tr("No active call"))
         self.state_label.setText("")
         self.duration_label.setText("")
 

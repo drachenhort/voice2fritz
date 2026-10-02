@@ -27,6 +27,7 @@ from voice2fritz.gui.contacts_panel import ContactsPanel
 from voice2fritz.gui.incoming_call_popup import IncomingCallPopup
 from voice2fritz.gui.nav_rail import NavRail
 from voice2fritz.gui.settings_panel import SettingsPanel
+from voice2fritz.i18n import current_language, set_language, tr
 
 _T9_LETTERS = {
     "1": "", "2": "ABC", "3": "DEF",
@@ -37,6 +38,8 @@ _T9_LETTERS = {
 
 _KEY_FLASH_MS = 120
 _REGISTRATION_VERIFY_TIMEOUT_MS = 20_000
+# main() relaunches the app when the event loop exits with this code.
+RESTART_EXIT_CODE = 75
 
 
 class DialpadButton(QPushButton):
@@ -97,7 +100,7 @@ class MainWindow(QMainWindow):
         self.contact_name_label.setObjectName("contactNameLabel")
         self.contact_name_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.backspace_button = QPushButton("⌫")
-        self.backspace_button.setToolTip("Backspace")
+        self.backspace_button.setToolTip(tr("Backspace"))
 
         number_row = QHBoxLayout()
         number_row.addWidget(self.number_edit)
@@ -130,17 +133,17 @@ class MainWindow(QMainWindow):
         for col in range(3):
             dialpad_grid.setColumnStretch(col, 1)
 
-        self.call_button = QPushButton("📞 CALL")
+        self.call_button = QPushButton(tr("📞 CALL"))
         self.call_button.setObjectName("callButton")
-        self.call_button.setToolTip("Call")
+        self.call_button.setToolTip(tr("Call"))
 
-        self.hangup_button = QPushButton("✕ Hangup")
+        self.hangup_button = QPushButton(tr("✕ Hangup"))
         self.hangup_button.setObjectName("navButton")
-        self.hangup_button.setToolTip("Hang up")
+        self.hangup_button.setToolTip(tr("Hang up"))
         self.hangup_button.setEnabled(False)
-        self.mute_button = QPushButton("🔇 Mute")
+        self.mute_button = QPushButton(tr("🔇 Mute"))
         self.mute_button.setObjectName("navButton")
-        self.mute_button.setToolTip("Mute")
+        self.mute_button.setToolTip(tr("Mute"))
         self.mute_button.setCheckable(True)
         self.mute_button.setEnabled(False)
 
@@ -171,10 +174,11 @@ class MainWindow(QMainWindow):
         self.contacts_panel.contactSelected.connect(self.number_edit.setText)
         self.contacts_panel.contactActivated.connect(self._on_contact_activated)
         self.settings_panel.accountSaved.connect(self._on_account_saved)
+        self.settings_panel.languageChanged.connect(self._on_language_changed)
 
         self.sip_status_led = QLabel()
         self.sip_status_led.setFixedSize(14, 14)
-        self._set_sip_status_led(is_ok=False, text="Not registered")
+        self._set_sip_status_led(is_ok=False, text=tr("Not registered"))
 
         status_row = QHBoxLayout()
         status_row.addWidget(self.sip_status_led)
@@ -206,9 +210,9 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         restore_saved_devices(self.sip_engine)
 
-        self._show_window_action = QAction("Show voice2fritz", self)
+        self._show_window_action = QAction(tr("Show voice2fritz"), self)
         self._show_window_action.triggered.connect(self._show_and_raise)
-        self._quit_action = QAction("Quit", self)
+        self._quit_action = QAction(tr("Quit"), self)
         self._quit_action.triggered.connect(self._on_tray_quit)
 
         tray_menu = QMenu(self)
@@ -259,11 +263,11 @@ class MainWindow(QMainWindow):
 
     def _show_close_dialog(self) -> str:
         box = QMessageBox(self)
-        box.setWindowTitle("Close voice2fritz?")
-        box.setText("Quit voice2fritz, or keep it running in the tray?")
-        quit_button = box.addButton("Quit", QMessageBox.ButtonRole.AcceptRole)
-        tray_button = box.addButton("Minimize to Tray", QMessageBox.ButtonRole.ActionRole)
-        box.addButton("Cancel", QMessageBox.ButtonRole.RejectRole)
+        box.setWindowTitle(tr("Close voice2fritz?"))
+        box.setText(tr("Quit voice2fritz, or keep it running in the tray?"))
+        quit_button = box.addButton(tr("Quit"), QMessageBox.ButtonRole.AcceptRole)
+        tray_button = box.addButton(tr("Minimize to Tray"), QMessageBox.ButtonRole.ActionRole)
+        box.addButton(tr("Cancel"), QMessageBox.ButtonRole.RejectRole)
         box.setDefaultButton(tray_button)
         box.exec()
         clicked = box.clickedButton()
@@ -309,22 +313,22 @@ class MainWindow(QMainWindow):
         if text.startswith("2"):
             box = QMessageBox(self)
             box.setIcon(QMessageBox.Icon.Information)
-            box.setWindowTitle("Settings verified")
-            box.setText(f"The new settings work: registered as {account}.")
+            box.setWindowTitle(tr("Settings verified"))
+            box.setText(tr("The new settings work: registered as {account}.", account=account))
             self._verification_success_box = box
             box.open()
         else:
             self._show_registration_error(
-                "Could not register with the new settings. Check host, username and password.",
-                f"Registration failed for {account}: {text}",
+                tr("Could not register with the new settings. Check host, username and password."),
+                tr("Registration failed for {account}: {detail}", account=account, detail=text),
             )
 
     def _on_verification_timeout(self) -> None:
         account = self._verifying_account
         self._finish_verification()
         self._show_registration_error(
-            "Could not register with the new settings. Check host, username and password.",
-            f"No response from the registrar for {account}.",
+            tr("Could not register with the new settings. Check host, username and password."),
+            tr("No response from the registrar for {account}.", account=account),
         )
 
     def _finish_verification(self) -> None:
@@ -333,7 +337,7 @@ class MainWindow(QMainWindow):
 
     def _on_registration_failed(self, message: str) -> None:
         self._show_registration_error(
-            "The FRITZ!Box rejected the login. Check the username and password in Settings.",
+            tr("The FRITZ!Box rejected the login. Check the username and password in Settings."),
             message,
         )
 
@@ -346,14 +350,32 @@ class MainWindow(QMainWindow):
             return
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("SIP registration failed")
+        box.setWindowTitle(tr("SIP registration failed"))
         box.setText(headline)
         box.setInformativeText(message)
-        settings_button = box.addButton("Open Settings", QMessageBox.ButtonRole.AcceptRole)
+        settings_button = box.addButton(tr("Open Settings"), QMessageBox.ButtonRole.AcceptRole)
         box.addButton(QMessageBox.StandardButton.Close)
         settings_button.clicked.connect(self._show_settings_page)
         self._registration_error_box = box
         box.open()
+
+    def _on_language_changed(self, language: str) -> None:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        # Show the prompt in the language just picked.
+        previous = current_language()
+        set_language(language)
+        box.setWindowTitle(tr("Restart required"))
+        box.setText(tr("The language changes after a restart. Restart voice2fritz now?"))
+        restart_button = box.addButton(tr("Restart now"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(tr("Later"), QMessageBox.ButtonRole.RejectRole)
+        set_language(previous)
+        restart_button.clicked.connect(self.restart)
+        self._language_restart_box = box
+        box.open()
+
+    def restart(self) -> None:
+        QApplication.instance().exit(RESTART_EXIT_CODE)
 
     def _show_settings_page(self) -> None:
         self.showNormal()
@@ -363,7 +385,7 @@ class MainWindow(QMainWindow):
         self.nav_rail.set_current_index(settings_index)
 
     def _on_call_state_changed(self, text: str) -> None:
-        self.call_details.set_state_text(text)
+        self.call_details.set_state_text(tr(text))
 
     def _set_dtmf_mode(self, enabled: bool) -> None:
         for button in self.digit_buttons.values():
@@ -419,7 +441,7 @@ class MainWindow(QMainWindow):
 
     def _set_call_button_active(self, active: bool) -> None:
         self.settings_panel.set_call_active(active)
-        self.call_button.setText("✕ HANGUP" if active else "📞 CALL")
+        self.call_button.setText(tr("✕ HANGUP") if active else tr("📞 CALL"))
         self.call_button.setProperty("callActive", active)
         self.call_button.style().unpolish(self.call_button)
         self.call_button.style().polish(self.call_button)
@@ -519,8 +541,11 @@ class MainWindow(QMainWindow):
             self.sip_engine.register(cfg.host, cfg.username, password)
         except Exception as exc:
             self._finish_verification()
-            settings = "new" if verify else "saved"
+            if verify:
+                headline = tr("Could not register with the new settings. Check host, username and password.")
+            else:
+                headline = tr("Could not register with the saved settings. Check host, username and password.")
             self._show_registration_error(
-                f"Could not register with the {settings} settings. Check host, username and password.",
-                f"Registration failed for {account}: {exc}",
+                headline,
+                tr("Registration failed for {account}: {detail}", account=account, detail=exc),
             )

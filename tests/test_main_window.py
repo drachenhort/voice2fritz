@@ -1011,3 +1011,37 @@ def test_startup_registration_success_shows_no_confirmation(qtbot, monkeypatch):
 
     assert engine.registrations == [("fritz.box", "user123", "secret")]
     assert not hasattr(window, "_verification_success_box")
+
+
+def test_language_change_offers_restart_in_new_language(qtbot):
+    from voice2fritz.i18n import current_language
+
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window._on_language_changed("de")
+
+    box = window._language_restart_box
+    assert box.isVisible()
+    assert box.windowTitle() == "Neustart erforderlich"
+    assert [b.text() for b in box.buttons()] == ["Jetzt neu starten", "Später"]
+    assert current_language() == "en"  # the running app keeps its language until restart
+
+
+def test_restart_now_exits_event_loop_with_restart_code(qtbot, monkeypatch):
+    from PySide6.QtWidgets import QApplication
+
+    from voice2fritz.gui.main_window import RESTART_EXIT_CODE
+
+    exit_codes = []
+    monkeypatch.setattr(QApplication.instance(), "exit", lambda code=0: exit_codes.append(code))
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window._on_language_changed("de")
+    restart_button = window._language_restart_box.buttons()[0]
+    restart_button.click()
+
+    assert exit_codes == [RESTART_EXIT_CODE]

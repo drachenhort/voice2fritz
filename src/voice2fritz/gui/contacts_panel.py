@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from voice2fritz import config, contacts as contacts_module
 from voice2fritz import google_contacts
+from voice2fritz.i18n import tr
 
 
 class _GoogleSyncWorker(QObject):
@@ -41,7 +42,7 @@ class ContactsPanel(QWidget):
         self._displayed_contacts: list[contacts_module.Contact] = []
 
         self.contact_table = QTableWidget(0, 3)
-        self.contact_table.setHorizontalHeaderLabels(["Name", "Type", "Number"])
+        self.contact_table.setHorizontalHeaderLabels([tr("Name"), tr("Type"), tr("Number")])
         self.contact_table.verticalHeader().setVisible(False)
         self.contact_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.contact_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -51,10 +52,10 @@ class ContactsPanel(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
 
-        sort_label = QLabel("Sort by:")
+        sort_label = QLabel(tr("Sort by:"))
         self.sort_combo = QComboBox()
-        self.sort_combo.addItem("Name", "name")
-        self.sort_combo.addItem("Number", "number")
+        self.sort_combo.addItem(tr("Name"), "name")
+        self.sort_combo.addItem(tr("Number"), "number")
         current_sort = config.load_contacts_sort_order()
         self.sort_combo.setCurrentIndex(self.sort_combo.findData(current_sort))
 
@@ -63,16 +64,16 @@ class ContactsPanel(QWidget):
         sort_row.addWidget(self.sort_combo)
         sort_row.addStretch()
 
-        add_label = QLabel("Add contact")
+        add_label = QLabel(tr("Add contact"))
         add_label.setObjectName("sectionLabel")
 
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText("Name")
+        self.name_edit.setPlaceholderText(tr("Name"))
         self.type_edit = QLineEdit()
-        self.type_edit.setPlaceholderText("Type (optional)")
+        self.type_edit.setPlaceholderText(tr("Type (optional)"))
         self.number_edit = QLineEdit()
-        self.number_edit.setPlaceholderText("Number")
-        self.add_button = QPushButton("Add")
+        self.number_edit.setPlaceholderText(tr("Number"))
+        self.add_button = QPushButton(tr("Add"))
         self.add_button.setObjectName("addButton")
 
         add_row = QHBoxLayout()
@@ -81,10 +82,10 @@ class ContactsPanel(QWidget):
         add_row.addWidget(self.number_edit)
         add_row.addWidget(self.add_button)
 
-        self.delete_button = QPushButton("Delete")
+        self.delete_button = QPushButton(tr("Delete"))
         self.delete_button.setObjectName("deleteButton")
-        self.select_button = QPushButton("Select")
-        self.sync_button = QPushButton("Sync Google")
+        self.select_button = QPushButton(tr("Select"))
+        self.sync_button = QPushButton(tr("Sync Google"))
 
         button_row = QHBoxLayout()
         button_row.addWidget(self.delete_button)
@@ -168,10 +169,10 @@ class ContactsPanel(QWidget):
 
     def _on_sync_done(self, count: int) -> None:
         self._reload_list()
-        QMessageBox.information(self, "Contacts", f"{count} contact(s) added or updated.")
+        QMessageBox.information(self, tr("Contacts"), tr("{count} contact(s) added or updated.", count=count))
 
     def _on_sync_failed(self, message: str) -> None:
-        QMessageBox.warning(self, "Contacts", f"Could not sync Google contacts: {message}")
+        QMessageBox.warning(self, tr("Contacts"), tr("Could not sync Google contacts: {message}", message=message))
 
     def _on_sync_thread_finished(self) -> None:
         self.sync_button.setEnabled(True)

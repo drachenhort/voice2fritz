@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- German translation of the whole interface: menus, buttons, dialogs,
+  call states and Qt's standard texts. Choose it under Settings ->
+  Language (English stays the default); the app offers to restart to
+  apply it. Not available during a call.
+
 ## [0.10.0]
 
 ### Added
