@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from PySide6.QtCore import QTimer, Signal
+from PySide6.QtCore import QLocale, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from voice2fritz import config
 from voice2fritz.network import describe_address
 from voice2fritz.audio import populate_and_restore_devices, wav_is_finalized, wav_peak
-from voice2fritz.i18n import LANGUAGES, tr
+from voice2fritz.i18n import LANGUAGES, language_from_locale, tr
 
 _LEVEL_POLL_MS = 100
 ECHO_RECORD_MS = 3000
@@ -266,6 +266,10 @@ class SettingsPanel(QWidget):
     def _on_language_changed(self, index: int) -> None:
         language = self.language_combo.itemData(index)
         config.save_language(language)
+        system_language = language_from_locale(QLocale.system().name())
+        if language != system_language:
+            # A deliberate choice against the system language: don't offer it at startup.
+            config.save_declined_system_language(system_language)
         self.languageChanged.emit(language)
 
     def _on_capture_changed(self, index: int) -> None:

@@ -80,6 +80,17 @@ def save_language(value: str, path: Path = DEFAULT_CONFIG_PATH) -> None:
     _write_raw(data, path)
 
 
+def load_declined_system_language(path: Path = DEFAULT_CONFIG_PATH) -> str | None:
+    data = _read_raw(path)
+    return data.get("declined_system_language")
+
+
+def save_declined_system_language(value: str, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    data = _read_raw(path)
+    data["declined_system_language"] = value
+    _write_raw(data, path)
+
+
 def load_contacts_sort_order(path: Path = DEFAULT_CONFIG_PATH) -> str:
     data = _read_raw(path)
     return data.get("contacts_sort_order", "name")

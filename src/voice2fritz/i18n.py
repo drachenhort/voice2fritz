@@ -41,6 +41,11 @@ _GERMAN = {
         "Die Sprache wird nach einem Neustart umgestellt. voice2fritz jetzt neu starten?",
     "Restart now": "Jetzt neu starten",
     "Later": "Später",
+    "Your system language is {language}. Switch voice2fritz to {language}?":
+        "Deine Systemsprache ist {language}. voice2fritz auf {language} umstellen?",
+    "You can change this later in Settings.": "Das lässt sich später in den Einstellungen ändern.",
+    "Switch to {language}": "Auf {language} umstellen",
+    "Keep {language}": "{language} beibehalten",
     # Navigation
     "Dialpad": "Wähltastatur",
     "Contacts": "Kontakte",
@@ -125,6 +130,23 @@ _GERMAN = {
 }
 
 _language = DEFAULT_LANGUAGE
+
+
+def language_from_locale(locale_name: str) -> str:
+    """"de_DE" or "de-DE" -> "de"."""
+    return locale_name.replace("-", "_").split("_", 1)[0].lower()
+
+
+def system_language_offer(locale_name: str, configured: str, declined: str | None) -> str | None:
+    """The system language to offer at startup, or None if there's nothing to offer.
+
+    Offered only when the program supports it, it isn't the configured language
+    already, and the user hasn't turned down this same offer before.
+    """
+    system_language = language_from_locale(locale_name)
+    if system_language not in LANGUAGES or system_language in (configured, declined):
+        return None
+    return system_language
 
 
 def set_language(language: str) -> None:

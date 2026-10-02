@@ -52,6 +52,7 @@ def no_device_persistence(monkeypatch):
     monkeypatch.setattr(config, "load_device_selection", lambda path=config.DEFAULT_CONFIG_PATH: (None, None))
     monkeypatch.setattr(config, "save_device_selection", lambda capture, playback, path=config.DEFAULT_CONFIG_PATH: None)
     monkeypatch.setattr(config, "load_language", lambda path=config.DEFAULT_CONFIG_PATH: "en")
+    monkeypatch.setattr(config, "save_declined_system_language", lambda value, path=config.DEFAULT_CONFIG_PATH: None)
 
 
 @pytest.fixture
@@ -292,3 +293,17 @@ def test_call_audio_ip_without_interface_shows_only_the_address(panel, monkeypat
     panel.update_call_audio_ip()
 
     assert panel.call_audio_ip_label.text() == "192.168.178.26"
+
+
+def test_choosing_a_language_other_than_the_system_one_stops_the_startup_offer(panel, monkeypatch):
+    from PySide6.QtCore import QLocale
+
+    declined = []
+    monkeypatch.setattr(config, "save_language", lambda value, path=config.DEFAULT_CONFIG_PATH: None)
+    monkeypatch.setattr(config, "save_declined_system_language", lambda value, path=config.DEFAULT_CONFIG_PATH: declined.append(value))
+    monkeypatch.setattr(settings_panel_module.QLocale, "system", staticmethod(lambda: QLocale("de_DE")))
+
+    panel.language_combo.setCurrentIndex(panel.language_combo.findData("de"))  # matches the system: no record
+    panel.language_combo.setCurrentIndex(panel.language_combo.findData("en"))
+
+    assert declined == ["de"]

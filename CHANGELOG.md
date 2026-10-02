@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- On startup the app checks the system language. If it's supported but
+  not the language set in voice2fritz, it asks (in that language)
+  whether to switch; accepting applies it immediately. A "no" is
+  remembered until the system language changes, and so is choosing a
+  different language in Settings.
+
 ## [0.12.0]
 
 ### Added

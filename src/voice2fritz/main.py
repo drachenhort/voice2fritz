@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication
 
 from voice2fritz import config, i18n
 from voice2fritz.gui import theme
+from voice2fritz.gui.language_prompt import ask_to_switch_language
 from voice2fritz.gui.main_window import RESTART_EXIT_CODE, MainWindow
 from voice2fritz.gui.settings_dialog import SettingsDialog
 from voice2fritz.sip_engine import SipEngine
@@ -20,7 +21,11 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setDesktopFileName("voice2fritz")
 
+    app.setStyleSheet(theme.DARK_STYLESHEET)
+    app.setWindowIcon(QIcon(str(ICON_PATH)))
+
     i18n.set_language(config.load_language())
+    _offer_system_language()
     if i18n.current_language() != "en":
         # Qt's own texts: standard dialog buttons, text field context menus.
         qt_translator = QTranslator(app)
@@ -28,8 +33,6 @@ def main() -> None:
         if qt_translator.load(QLocale(i18n.current_language()), "qtbase", "_", translations):
             app.installTranslator(qt_translator)
 
-    app.setStyleSheet(theme.DARK_STYLESHEET)
-    app.setWindowIcon(QIcon(str(ICON_PATH)))
     app.setQuitOnLastWindowClosed(False)
 
     sip_engine = SipEngine()
@@ -53,6 +56,21 @@ def main() -> None:
     if exit_code == RESTART_EXIT_CODE:
         _relaunch()
     sys.exit(exit_code)
+
+
+def _offer_system_language() -> None:
+    # Runs before any window exists, so switching needs no restart.
+    offered = i18n.system_language_offer(
+        QLocale.system().name(), i18n.current_language(), config.load_declined_system_language()
+    )
+    if offered is None:
+        return
+    if ask_to_switch_language(offered):
+        config.save_language(offered)
+        i18n.set_language(offered)
+    else:
+        # Don't ask again until the system language changes.
+        config.save_declined_system_language(offered)
 
 
 def _relaunch() -> None:
