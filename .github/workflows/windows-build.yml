@@ -1,0 +1,129 @@
+name: Windows build
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Attach the build to this existing release (e.g. v0.11.0); leave empty to only keep it as a workflow artifact"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  PJPROJECT_VERSION: "2.17"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out voice2fritz
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Restore pjsua2 wheel from cache
+        id: pjsua2-cache
+        uses: actions/cache@v4
+        with:
+          path: pjsua2-wheel
+          key: pjsua2-v1-${{ env.PJPROJECT_VERSION }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('packaging/windows/setup_pjsua2.py') }}
+
+      - name: Check out pjproject
+        if: steps.pjsua2-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: pjsip/pjproject
+          ref: ${{ env.PJPROJECT_VERSION }}
+          path: pjproject
+
+      - name: Configure pjproject
+        if: steps.pjsua2-cache.outputs.cache-hit != 'true'
+        run: |
+          # The VS build requires config_site.h; voice2fritz is audio-only.
+          Set-Content -Path pjproject/pjlib/include/pj/config_site.h -Value "#define PJMEDIA_HAS_VIDEO 0"
+
+      - name: Set up MSBuild
+        if: steps.pjsua2-cache.outputs.cache-hit != 'true'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build pjproject (Release-Dynamic, x64)
+        if: steps.pjsua2-cache.outputs.cache-hit != 'true'
+        working-directory: pjproject
+        run: msbuild pjproject-vs14.sln /t:libpjproject /p:Configuration=Release-Dynamic /p:Platform=x64 /m /v:minimal
+
+      - name: Generate the SWIG wrapper
+        if: steps.pjsua2-cache.outputs.cache-hit != 'true'
+        working-directory: pjproject/pjsip-apps/src/swig/python
+        run: |
+          choco install swig --no-progress -y
+          swig -I../../../../pjlib/include -I../../../../pjlib-util/include -I../../../../pjmedia/include `
+               -I../../../../pjsip/include -I../../../../pjnath/include `
+               -c++ -w312 -threads -python -o pjsua2_wrap.cpp ../pjsua2.i
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build the pjsua2 wheel
+        if: steps.pjsua2-cache.outputs.cache-hit != 'true'
+        working-directory: pjproject/pjsip-apps/src/swig/python
+        env:
+          PJDIR: ${{ github.workspace }}/pjproject
+          PJ_VERSION: ${{ env.PJPROJECT_VERSION }}
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          Copy-Item ${{ github.workspace }}/packaging/windows/setup_pjsua2.py .
+          python setup_pjsua2.py bdist_wheel --dist-dir ${{ github.workspace }}/pjsua2-wheel
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install voice2fritz, pjsua2 and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install (Get-ChildItem pjsua2-wheel/*.whl).FullName
+          python -m pip install . pyinstaller
+
+      - name: Smoke test pjsua2 and the app modules
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -c "import pjsua2 as pj; ep = pj.Endpoint(); ep.libCreate(); cfg = pj.EpConfig(); cfg.logConfig.consoleLevel = 0; ep.libInit(cfg); print('pjsua2', ep.libVersion().full, 'audio devices:', len(ep.audDevManager().enumDev2())); ep.libDestroy()"
+          python -c "import voice2fritz.gui.main_window, voice2fritz.network; print('voice2fritz modules import fine')"
+
+      - name: Build the executable with PyInstaller
+        run: |
+          pyinstaller --noconfirm --windowed --name voice2fritz `
+            --add-data "src/voice2fritz/gui/resources;voice2fritz/gui/resources" `
+            --collect-data googleapiclient `
+            --hidden-import keyring.backends.Windows `
+            packaging/windows/launcher.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package the zip
+        id: package
+        run: |
+          $tag = "${{ github.event.release.tag_name || inputs.release_tag }}"
+          if (-not $tag) { $tag = "dev-${{ github.sha }}".Substring(0, 11) }
+          $zip = "voice2fritz-$tag-windows-x64.zip"
+          Compress-Archive -Path dist/voice2fritz -DestinationPath $zip
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Keep the zip as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.zip }}
+          path: ${{ steps.package.outputs.zip }}
+
+      - name: Attach the zip to the release
+        if: github.event_name == 'release' || inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.package.outputs.tag }}" "${{ steps.package.outputs.zip }}" --clobber

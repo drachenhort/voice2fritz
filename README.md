@@ -14,6 +14,20 @@ Tested against a FRITZ!Box 7590.
 See [CHANGELOG.md](CHANGELOG.md) for release notes. Licensed under the
 [GNU General Public License v3.0 or later](LICENSE).
 
+## Windows (experimental)
+
+Every release gets a Windows build, `voice2fritz-<version>-windows-x64.zip`,
+on the [releases page](https://github.com/drachenhort/voice2fritz/releases):
+unzip it and run `voice2fritz.exe`. It's built automatically by a GitHub
+workflow (pjproject compiled with Visual Studio, packaged with PyInstaller)
+and has **not been tested on a real Windows machine** - the maintainer
+doesn't use Windows. On Windows the audio device list shows the devices
+as PJSIP names them, and the Call audio IP row shows only the address,
+without the network type.
+
+If you try it, please [open an issue](https://github.com/drachenhort/voice2fritz/issues)
+and say whether registering, calling and audio work.
+
 ## Setup
 
 `voice2fritz` requires `pjsua2` (PJSIP's Python bindings), which is not

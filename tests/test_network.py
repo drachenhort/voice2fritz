@@ -49,3 +49,11 @@ def test_unassigned_address_is_unknown():
     info = describe_address("203.0.113.77")
     assert info.interface is None
     assert info.kind == "Unknown"
+
+
+def test_interface_lookup_is_skipped_off_linux(monkeypatch):
+    import sys
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    assert interface_for_address("127.0.0.1") is None
+    assert describe_address("127.0.0.1").kind == "Unknown"

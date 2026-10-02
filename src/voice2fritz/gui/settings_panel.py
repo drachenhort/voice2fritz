@@ -138,8 +138,11 @@ class SettingsPanel(QWidget):
             self.call_audio_ip_label.setToolTip("")
             return
         info = describe_address(address)
-        interface = f" ({info.interface})" if info.interface else ""
-        self.call_audio_ip_label.setText(f"{info.address} - {tr(info.kind)}{interface}")
+        if info.interface is None:
+            # Network type is only known where interfaces can be inspected (Linux).
+            self.call_audio_ip_label.setText(info.address)
+        else:
+            self.call_audio_ip_label.setText(f"{info.address} - {tr(info.kind)} ({info.interface})")
         if info.kind == "VPN":
             # The FRITZ!Box is on the LAN; audio routed through a VPN usually doesn't arrive.
             self.call_audio_ip_label.setStyleSheet("color: #d08a2c;")

@@ -14,6 +14,22 @@ Getestet mit einer FRITZ!Box 7590.
 Siehe [CHANGELOG.md](CHANGELOG.md) für die Versionshistorie. Lizenziert
 unter der [GNU General Public License v3.0 oder neuer](LICENSE).
 
+## Windows (experimentell)
+
+Zu jedem Release gibt es einen Windows-Build,
+`voice2fritz-<version>-windows-x64.zip`, auf der
+[Release-Seite](https://github.com/drachenhort/voice2fritz/releases):
+entpacken und `voice2fritz.exe` starten. Er wird automatisch von einem
+GitHub-Workflow gebaut (pjproject mit Visual Studio kompiliert, mit
+PyInstaller verpackt) und wurde **nicht auf einem echten Windows-Rechner
+getestet** - der Maintainer nutzt kein Windows. Unter Windows zeigt die
+Geräteliste die Geräte so, wie PJSIP sie benennt, und die Zeile „IP für
+Anrufton" zeigt nur die Adresse, ohne Netzwerktyp.
+
+Wer es ausprobiert, bitte ein
+[Issue öffnen](https://github.com/drachenhort/voice2fritz/issues) und
+schreiben, ob Anmeldung, Anrufe und Ton funktionieren.
+
 ## Einrichtung
 
 `voice2fritz` benötigt `pjsua2` (die Python-Bindings von PJSIP), die

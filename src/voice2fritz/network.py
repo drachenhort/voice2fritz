@@ -1,6 +1,6 @@
-import fcntl
 import socket
 import struct
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,7 +18,11 @@ class AddressInfo:
 
 
 def interface_for_address(address: str) -> str | None:
-    """Name of the interface carrying this IPv4 address, or None."""
+    """Name of the interface carrying this IPv4 address, or None (always None off Linux)."""
+    if not sys.platform.startswith("linux"):
+        return None
+    import fcntl  # Linux-only; imported here so the module loads on Windows
+
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
         for _, name in socket.if_nameindex():
             try:

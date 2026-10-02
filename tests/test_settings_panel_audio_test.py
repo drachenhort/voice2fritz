@@ -282,3 +282,13 @@ def test_saving_a_password_clears_the_field_and_resets_status(qtbot, monkeypatch
     assert stored == {"microsip": "microsip1"}
     assert panel.password_edit.text() == ""
     assert panel.password_edit.placeholderText() == "Password saved (not tested yet)"
+
+
+def test_call_audio_ip_without_interface_shows_only_the_address(panel, monkeypatch):
+    from voice2fritz.network import AddressInfo
+
+    monkeypatch.setattr(settings_panel_module, "describe_address", lambda address: AddressInfo(address, None, "Unknown"))
+    panel.sip_engine.media_address = "192.168.178.26"
+    panel.update_call_audio_ip()
+
+    assert panel.call_audio_ip_label.text() == "192.168.178.26"

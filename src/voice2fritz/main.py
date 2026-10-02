@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -50,8 +51,21 @@ def main() -> None:
     exit_code = app.exec()
     sip_engine.stop()
     if exit_code == RESTART_EXIT_CODE:
-        os.execv(sys.executable, [sys.executable, "-m", "voice2fritz.main", *sys.argv[1:]])
+        _relaunch()
     sys.exit(exit_code)
+
+
+def _relaunch() -> None:
+    if getattr(sys, "frozen", False):
+        # Packaged build (PyInstaller): the executable is the app itself.
+        command = [sys.executable, *sys.argv[1:]]
+    else:
+        command = [sys.executable, "-m", "voice2fritz.main", *sys.argv[1:]]
+    if sys.platform == "win32":
+        # os.execv on Windows starts a detached copy and returns oddly; spawn and exit instead.
+        subprocess.Popen(command)
+        sys.exit(0)
+    os.execv(command[0], command)
 
 
 if __name__ == "__main__":

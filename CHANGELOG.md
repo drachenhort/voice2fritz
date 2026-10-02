@@ -4,9 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Experimental Windows build: a GitHub workflow compiles pjproject with
+  Visual Studio, packages the app with PyInstaller and attaches
+  `voice2fritz-<version>-windows-x64.zip` to each release. Untested on
+  real Windows hardware.
+
 ### Changed
 - voice2fritz is now licensed under the GNU General Public License
   v3.0 or later (previously MIT).
+- The app starts on Windows: the Linux-only network inspection and the
+  restart after a language change no longer assume Linux.
 
 ## [0.11.0]
 
