@@ -9,6 +9,12 @@ All notable changes to this project are documented in this file.
   call states and Qt's standard texts. Choose it under Settings ->
   Language (English stays the default); the app offers to restart to
   apply it. Not available during a call.
+- Selecting a call log entry opens an action bar below it: Redial or
+  Call back, Edit (puts the number on the dialpad to change before
+  calling) and Save to contacts (hidden for numbers already saved).
+
+### Fixed
+- Call log rows no longer draw dark boxes behind their texts.
 
 ## [0.10.0]
 

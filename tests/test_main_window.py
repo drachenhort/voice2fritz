@@ -1045,3 +1045,17 @@ def test_restart_now_exits_event_loop_with_restart_code(qtbot, monkeypatch):
     restart_button.click()
 
     assert exit_codes == [RESTART_EXIT_CODE]
+
+
+def test_edit_from_call_log_puts_number_on_dialpad(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.pages.setCurrentWidget(window.log_panel)
+
+    window.log_panel.editRequested.emit("+4930111111")
+
+    assert window.pages.currentIndex() == 0
+    assert window.number_edit.text() == "+4930111111"
+    assert engine.calls_made == []
+

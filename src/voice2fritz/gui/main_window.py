@@ -170,6 +170,7 @@ class MainWindow(QMainWindow):
 
         self.log_panel.entryActivated.connect(self.number_edit.setText)
         self.log_panel.dialRequested.connect(self._on_contact_activated)
+        self.log_panel.editRequested.connect(self._on_edit_number_requested)
         self.log_panel.contactSaved.connect(self.contacts_panel._reload_list)
         self.contacts_panel.contactSelected.connect(self.number_edit.setText)
         self.contacts_panel.contactActivated.connect(self._on_contact_activated)
@@ -410,6 +411,12 @@ class MainWindow(QMainWindow):
         self.nav_rail.set_current_index(0)
         self.number_edit.setText(number)
         self._on_call_clicked()
+
+    def _on_edit_number_requested(self, number: str) -> None:
+        self.pages.setCurrentIndex(0)
+        self.nav_rail.set_current_index(0)
+        self.number_edit.setText(number)
+        self.number_edit.setFocus()
 
     def _on_call_button_clicked(self) -> None:
         if self._active_call is not None:

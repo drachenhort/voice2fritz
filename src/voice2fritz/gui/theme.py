@@ -175,6 +175,13 @@ QListWidget::item:selected {
     color: #ffffff;
 }
 
+/* Call log rows are item widgets: let the list's row and selection colours show through. */
+QWidget#callLogRow,
+QWidget#callLogRow QLabel,
+QWidget#callLogActions {
+    background-color: transparent;
+}
+
 QTableWidget {
     background-color: #12141a;
     border: 1px solid #333333;

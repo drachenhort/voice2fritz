@@ -1,8 +1,15 @@
+import pytest
 from PySide6.QtCore import Qt
 
 from voice2fritz import call_log as call_log_module
 from voice2fritz import contacts as contacts_module
 from voice2fritz.gui.call_log_panel import CallLogPanel
+
+
+@pytest.fixture(autouse=True)
+def no_saved_contacts(monkeypatch):
+    # The panel checks which numbers are already contacts; keep tests off the real file.
+    monkeypatch.setattr(contacts_module, "load_contacts", lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [])
 
 
 def _entry(number="+4917612345678", name="Anna Schmidt", direction="outgoing", timestamp="2026-08-04T14:32:00", duration_seconds=135):
@@ -160,3 +167,77 @@ def test_cancelled_save_prompt_adds_nothing(qtbot, monkeypatch):
     panel._save_to_contacts(panel.entry_list.item(0).data(Qt.ItemDataRole.UserRole))
 
     assert added == []
+
+
+def _panel_with(qtbot, monkeypatch, entries):
+    monkeypatch.setattr(call_log_module, "load_call_log", lambda path=call_log_module.DEFAULT_CALL_LOG_PATH: entries)
+    panel = CallLogPanel()
+    qtbot.addWidget(panel)
+    panel.show()
+    return panel
+
+
+def test_selecting_an_entry_shows_its_actions_and_hides_the_previous(qtbot, monkeypatch):
+    panel = _panel_with(qtbot, monkeypatch, [_entry(number="+4930111111"), _entry(number="+4930222222")])
+    first, second = panel.entry_list.item(0), panel.entry_list.item(1)
+    assert not panel.row_for(first).actions.isVisible()
+
+    collapsed_height = first.sizeHint().height()
+    panel.entry_list.setCurrentItem(first)
+    assert panel.row_for(first).actions.isVisible()
+    assert first.sizeHint().height() > collapsed_height
+
+    panel.entry_list.setCurrentItem(second)
+    assert not panel.row_for(first).actions.isVisible()
+    assert panel.row_for(second).actions.isVisible()
+    assert first.sizeHint().height() == collapsed_height
+
+
+def test_action_buttons_emit_dial_and_edit(qtbot, monkeypatch):
+    panel = _panel_with(qtbot, monkeypatch, [_entry(number="+4930111111", direction="missed")])
+    row = panel.row_for(panel.entry_list.item(0))
+    assert row.dial_button.text() == "Call back"
+
+    with qtbot.waitSignal(panel.dialRequested, timeout=1000) as dial:
+        row.dial_button.click()
+    with qtbot.waitSignal(panel.editRequested, timeout=1000) as edit:
+        row.edit_button.click()
+
+    assert dial.args == ["+4930111111"]
+    assert edit.args == ["+4930111111"]
+
+
+def test_outgoing_entry_offers_redial(qtbot, monkeypatch):
+    panel = _panel_with(qtbot, monkeypatch, [_entry(direction="outgoing")])
+    assert panel.row_for(panel.entry_list.item(0)).dial_button.text() == "Redial"
+
+
+def test_save_button_hidden_for_saved_contact(qtbot, monkeypatch):
+    monkeypatch.setattr(
+        contacts_module,
+        "load_contacts",
+        lambda path=contacts_module.DEFAULT_CONTACTS_PATH: [contacts_module.Contact(name="Anna", number="+4930111111")],
+    )
+    panel = _panel_with(qtbot, monkeypatch, [_entry(number="+4930111111")])
+    panel.entry_list.setCurrentRow(0)
+
+    assert not panel.row_for(panel.entry_list.item(0)).save_button.isVisible()
+
+
+def test_save_button_saves_and_then_hides(qtbot, monkeypatch):
+    added = []
+    monkeypatch.setattr(
+        contacts_module,
+        "add_contact",
+        lambda name, number, number_type="", path=contacts_module.DEFAULT_CONTACTS_PATH: added.append((name, number)),
+    )
+    panel = _panel_with(qtbot, monkeypatch, [_entry(number="+4930111111", name="")])
+    monkeypatch.setattr(panel, "_prompt_contact_name", lambda number, default_name: "Carla")
+    panel.entry_list.setCurrentRow(0)
+    row = panel.row_for(panel.entry_list.item(0))
+
+    with qtbot.waitSignal(panel.contactSaved, timeout=1000):
+        row.save_button.click()
+
+    assert added == [("Carla", "+4930111111")]
+    assert not row.save_button.isVisible()

@@ -51,6 +51,7 @@ class _RecordingEngine:
 def no_device_persistence(monkeypatch):
     monkeypatch.setattr(config, "load_device_selection", lambda path=config.DEFAULT_CONFIG_PATH: (None, None))
     monkeypatch.setattr(config, "save_device_selection", lambda capture, playback, path=config.DEFAULT_CONFIG_PATH: None)
+    monkeypatch.setattr(config, "load_language", lambda path=config.DEFAULT_CONFIG_PATH: "en")
 
 
 @pytest.fixture
@@ -231,3 +232,4 @@ def test_language_switch_is_disabled_during_call(panel):
 
     panel.set_call_active(False)
     assert panel.language_combo.isEnabled()
+

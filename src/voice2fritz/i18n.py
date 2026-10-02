@@ -66,6 +66,8 @@ _GERMAN = {
     "Save to contacts…": "In Kontakte speichern…",
     "Save to contacts": "In Kontakte speichern",
     "Name for {number}:": "Name für {number}:",
+    "Edit": "Bearbeiten",
+    "Edit the number on the dialpad before calling": "Nummer vor dem Anruf auf der Wähltastatur bearbeiten",
     # Contacts
     "Name": "Name",
     "Type": "Typ",
