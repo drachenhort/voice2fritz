@@ -873,3 +873,72 @@ def test_registration_error_box_open_settings_switches_page(qtbot):
     settings_button.click()
 
     assert window.pages.currentWidget() is window.settings_panel
+
+
+def _save_account(window, monkeypatch):
+    monkeypatch.setattr(config_module, "get_password", lambda username: "secret")
+    window._on_account_saved(config_module.AccountConfig(host="fritz.box", username="user123"))
+
+
+def test_saved_settings_that_register_show_confirmation(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    _save_account(window, monkeypatch)
+    engine.registrationStateChanged.emit("200 OK")
+
+    box = window._verification_success_box
+    assert box.isVisible()
+    assert "user123@fritz.box" in box.text()
+    assert not window._verification_timer.isActive()
+
+
+def test_saved_settings_that_fail_show_error(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    _save_account(window, monkeypatch)
+    engine.registrationStateChanged.emit("408 Request Timeout")
+
+    box = window._registration_error_box
+    assert box.isVisible()
+    assert box.informativeText() == "Registration failed for user123@fritz.box: 408 Request Timeout"
+    assert not hasattr(window, "_verification_success_box")
+
+
+def test_only_first_registration_after_save_is_confirmed(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    _save_account(window, monkeypatch)
+    engine.registrationStateChanged.emit("200 OK")
+    first_box = window._verification_success_box
+    first_box.close()
+    engine.registrationStateChanged.emit("200 OK")  # periodic re-registration
+
+    assert window._verification_success_box is first_box
+    assert not first_box.isVisible()
+
+
+def test_registration_without_saving_settings_shows_no_confirmation(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    engine.registrationStateChanged.emit("200 OK")
+
+    assert not hasattr(window, "_verification_success_box")
+
+
+def test_saved_settings_without_response_time_out_with_error(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    _save_account(window, monkeypatch)
+    window._verification_timer.timeout.emit()
+
+    assert window._registration_error_box.informativeText() == "No response from the registrar for user123@fritz.box."

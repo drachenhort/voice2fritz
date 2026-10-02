@@ -36,6 +36,7 @@ _T9_LETTERS = {
 }
 
 _KEY_FLASH_MS = 120
+_REGISTRATION_VERIFY_TIMEOUT_MS = 20_000
 
 
 class DialpadButton(QPushButton):
@@ -220,11 +221,17 @@ class MainWindow(QMainWindow):
         self.tray_icon.show()
 
     def _connect_signals(self) -> None:
+        self._verifying_account: str | None = None
+        self._verification_timer = QTimer(self)
+        self._verification_timer.setSingleShot(True)
+        self._verification_timer.setInterval(_REGISTRATION_VERIFY_TIMEOUT_MS)
+        self._verification_timer.timeout.connect(self._on_verification_timeout)
         self.call_button.clicked.connect(self._on_call_button_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
         self.backspace_button.clicked.connect(self._on_backspace_clicked)
         self.mute_button.clicked.connect(self._on_mute_clicked)
         self.sip_engine.registrationStateChanged.connect(self._on_registration_state_changed)
+        self.sip_engine.registrationStateChanged.connect(self._on_registration_state_changed_verify)
         self.sip_engine.registrationFailed.connect(self._on_registration_failed)
         self.sip_engine.callStateChanged.connect(self._on_call_state_changed)
         self.sip_engine.callEnded.connect(self._on_call_ended)
@@ -294,16 +301,53 @@ class MainWindow(QMainWindow):
     def _on_registration_state_changed(self, text: str) -> None:
         self._set_sip_status_led(is_ok=(text == "200 OK"), text=text)
 
+    def _on_registration_state_changed_verify(self, text: str) -> None:
+        if self._verifying_account is None:
+            return
+        account = self._verifying_account
+        self._finish_verification()
+        if text.startswith("2"):
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Information)
+            box.setWindowTitle("Settings verified")
+            box.setText(f"The new settings work: registered as {account}.")
+            self._verification_success_box = box
+            box.open()
+        else:
+            self._show_registration_error(
+                "Could not register with the new settings. Check host, username and password.",
+                f"Registration failed for {account}: {text}",
+            )
+
+    def _on_verification_timeout(self) -> None:
+        account = self._verifying_account
+        self._finish_verification()
+        self._show_registration_error(
+            "Could not register with the new settings. Check host, username and password.",
+            f"No response from the registrar for {account}.",
+        )
+
+    def _finish_verification(self) -> None:
+        self._verifying_account = None
+        self._verification_timer.stop()
+
     def _on_registration_failed(self, message: str) -> None:
+        self._show_registration_error(
+            "The FRITZ!Box rejected the login. Check the username and password in Settings.",
+            message,
+        )
+
+    def _show_registration_error(self, headline: str, message: str) -> None:
         # PJSIP keeps retrying registration; reuse the open box instead of stacking new ones.
         box = getattr(self, "_registration_error_box", None)
         if box is not None and box.isVisible():
+            box.setText(headline)
             box.setInformativeText(message)
             return
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
         box.setWindowTitle("SIP registration failed")
-        box.setText("The FRITZ!Box rejected the login. Check the username and password in Settings.")
+        box.setText(headline)
         box.setInformativeText(message)
         settings_button = box.addButton("Open Settings", QMessageBox.ButtonRole.AcceptRole)
         box.addButton(QMessageBox.StandardButton.Close)
@@ -462,4 +506,7 @@ class MainWindow(QMainWindow):
 
     def _on_account_saved(self, cfg: config.AccountConfig) -> None:
         password = config.get_password(cfg.username) or ""
+        # Report the outcome of the first registration attempt with the new settings.
+        self._verifying_account = f"{cfg.username}@{cfg.host}"
+        self._verification_timer.start()
         self.sip_engine.register(cfg.host, cfg.username, password)

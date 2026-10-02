@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file.
 - A warning window appears when the FRITZ!Box rejects the SIP login
   (e.g. "maximum number of stale retries exceeded" or 401/403/407),
   showing the error and offering to open Settings.
+- Saving account settings now tests them: a confirmation appears once
+  the FRITZ!Box accepts the registration, or an error if it fails or
+  doesn't answer within 20 seconds.
 
 ## [0.7.0]
 
