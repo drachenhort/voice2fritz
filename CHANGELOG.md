@@ -9,7 +9,8 @@ All notable changes to this project are documented in this file.
   can see the chosen microphone picks you up.
 - "Test mic & speaker" in Settings records 3 seconds and plays them
   back on the chosen speaker - an echo test without placing a call.
-  It's unavailable during calls.
+  It's unavailable during calls. If the recording is silent, it says
+  "Recorded only silence - is the mic muted?" instead of playing it.
 
 ## [0.8.0]
 

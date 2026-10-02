@@ -1,4 +1,6 @@
+import array
 import json
+import wave
 import subprocess
 from dataclasses import dataclass
 
@@ -74,6 +76,20 @@ def wav_is_finalized(path: str) -> bool:
     except OSError:
         return False
     return len(header) == 44 and header[:4] == b"RIFF" and int.from_bytes(header[40:44], "little") > 0
+
+
+def wav_peak(path: str) -> int:
+    """Largest absolute sample in a 16-bit WAV file; 0 if it can't be read."""
+    try:
+        with wave.open(path, "rb") as wav:
+            if wav.getsampwidth() != 2:
+                return 0
+            samples = array.array("h", wav.readframes(wav.getnframes()))
+    except (OSError, EOFError, wave.Error):
+        return 0
+    if not samples:
+        return 0
+    return max(max(samples), -min(samples))
 
 
 def input_devices(devices: list[AudioDevice]) -> list[AudioDevice]:

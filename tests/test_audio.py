@@ -9,6 +9,7 @@ from voice2fritz.audio import (
     list_pulse_devices,
     parse_pulse_devices,
     wav_is_finalized,
+    wav_peak,
     input_devices,
     output_devices,
     populate_and_restore_devices,
@@ -182,3 +183,29 @@ def test_wav_is_finalized_once_data_size_written(tmp_path):
 
 def test_wav_is_finalized_false_for_missing_file(tmp_path):
     assert wav_is_finalized(str(tmp_path / "missing.wav")) is False
+
+
+def _write_wav(path, samples):
+    import array
+    import wave
+
+    with wave.open(str(path), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(array.array("h", samples).tobytes())
+
+
+def test_wav_peak_returns_largest_absolute_sample(tmp_path):
+    path = tmp_path / "echo.wav"
+    _write_wav(path, [0, 120, -6836, 300])
+
+    assert wav_peak(str(path)) == 6836
+
+
+def test_wav_peak_is_zero_for_unreadable_file(tmp_path):
+    path = tmp_path / "broken.wav"
+    path.write_bytes(b"not a wav")
+
+    assert wav_peak(str(path)) == 0
+    assert wav_peak(str(tmp_path / "missing.wav")) == 0

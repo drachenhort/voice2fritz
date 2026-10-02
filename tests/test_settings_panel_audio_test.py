@@ -59,7 +59,14 @@ def finalized_wav(monkeypatch):
 
 
 @pytest.fixture
-def panel(qtbot, finalized_wav):
+def recorded_peak(monkeypatch):
+    state = {"peak": 12000}
+    monkeypatch.setattr(settings_panel_module, "wav_peak", lambda path: state["peak"])
+    return state
+
+
+@pytest.fixture
+def panel(qtbot, finalized_wav, recorded_peak):
     engine = _RecordingEngine()
     panel = SettingsPanel(engine)
     qtbot.addWidget(panel)
@@ -124,6 +131,17 @@ def test_echo_test_gives_up_when_file_never_finishes(panel, finalized_wav):
         panel._advance_echo_test()
 
     assert panel.echo_test_status.text() == "Test failed: the recording was not saved."
+    assert panel.echo_test_button.isEnabled()
+
+
+def test_silent_recording_warns_instead_of_playing(panel, recorded_peak):
+    recorded_peak["peak"] = 13  # what a muted headset mic delivered
+    panel.echo_test_button.click()
+    panel._advance_echo_test()
+    panel._advance_echo_test()
+
+    assert "play" not in panel.sip_engine.events
+    assert panel.echo_test_status.text() == "Recorded only silence - is the mic muted?"
     assert panel.echo_test_button.isEnabled()
 
 

@@ -16,13 +16,15 @@ from PySide6.QtWidgets import (
 )
 
 from voice2fritz import config
-from voice2fritz.audio import populate_and_restore_devices, wav_is_finalized
+from voice2fritz.audio import populate_and_restore_devices, wav_is_finalized, wav_peak
 
 _LEVEL_POLL_MS = 100
 ECHO_RECORD_MS = 3000
 ECHO_PLAYBACK_MS = 3300
 _ECHO_FINALIZE_POLL_MS = 100
 _ECHO_FINALIZE_MAX_POLLS = 20
+# A muted mic records a peak of about 0-15; normal speech peaks in the thousands.
+_SILENCE_PEAK_THRESHOLD = 200
 _ECHO_TEST_PATH = os.path.join(tempfile.gettempdir(), "voice2fritz-echo-test.wav")
 
 
@@ -146,6 +148,9 @@ class SettingsPanel(QWidget):
                     self._end_echo_test("Test failed: the recording was not saved.")
                 else:
                     self._echo_timer.start(_ECHO_FINALIZE_POLL_MS)
+                return
+            if wav_peak(_ECHO_TEST_PATH) < _SILENCE_PEAK_THRESHOLD:
+                self._end_echo_test("Recorded only silence - is the mic muted?")
                 return
             try:
                 self.sip_engine.start_echo_playback(_ECHO_TEST_PATH)
