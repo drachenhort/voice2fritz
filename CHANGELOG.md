@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0]
+
 ### Added
 - Right-clicking a call log entry offers Redial (outgoing calls) or
   Call back (incoming/missed calls), which dials the number right away.
