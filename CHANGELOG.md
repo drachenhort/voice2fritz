@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.9.0]
+
 ### Added
 - Settings shows a live mic level bar while the page is open, so you
   can see the chosen microphone picks you up.
