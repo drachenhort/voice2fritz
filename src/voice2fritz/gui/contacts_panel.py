@@ -160,7 +160,9 @@ class ContactsPanel(QWidget):
         self._sync_worker.finished.connect(self._sync_thread.quit)
         self._sync_worker.failed.connect(self._sync_thread.quit)
         self._sync_thread.finished.connect(self._sync_thread.deleteLater)
-        self._sync_thread.finished.connect(self._sync_worker.deleteLater)
+        # No deleteLater for the worker: it has no parent, so Python owns it and frees it
+        # when _on_sync_thread_finished drops the reference. A deleteLater as well would
+        # free it a second time, from the worker thread, and crash intermittently.
         self._sync_thread.finished.connect(self._on_sync_thread_finished)
         self._sync_thread.start()
 
