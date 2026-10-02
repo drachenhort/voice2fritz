@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.13.0]
+
 ### Added
 - On startup the app checks the system language. If it's supported but
   not the language set in voice2fritz, it asks (in that language)
