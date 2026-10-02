@@ -12,7 +12,7 @@ password.
 Tested against a FRITZ!Box 7590.
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes. Licensed under the
-[MIT License](LICENSE).
+[GNU General Public License v3.0 or later](LICENSE).
 
 ## Setup
 

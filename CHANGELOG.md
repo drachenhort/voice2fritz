@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- voice2fritz is now licensed under the GNU General Public License
+  v3.0 or later (previously MIT).
+
 ## [0.11.0]
 
 ### Added

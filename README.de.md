@@ -12,7 +12,7 @@ Multi-Provider-SIP-Konfiguration, nur Host, Benutzername und Passwort.
 Getestet mit einer FRITZ!Box 7590.
 
 Siehe [CHANGELOG.md](CHANGELOG.md) für die Versionshistorie. Lizenziert
-unter der [MIT-Lizenz](LICENSE).
+unter der [GNU General Public License v3.0 oder neuer](LICENSE).
 
 ## Einrichtung
 
