@@ -112,4 +112,5 @@ bis voice2fritz sich verbindet.
 | Angerufene sehen die falsche Nummer | In den Einstellungen des Geräts in der FRITZ!Box die **ausgehende Rufnummer** ändern. |
 | Mikrofonpegel bewegt sich nicht | Falsches Mikrofon gewählt oder das Mikrofon ist in den Soundeinstellungen des Desktops stummgeschaltet. |
 
+Die Schritte wurden an einer FRITZ!Box 6591 Cable mit FRITZ!OS 8.25 geprüft.
 Menübezeichnungen können je nach FRITZ!OS-Version leicht abweichen.

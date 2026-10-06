@@ -9,7 +9,7 @@ password.
 
 ![voice2fritz screenshot](docs/images/screenshot.png)
 
-Tested against a FRITZ!Box 7590.
+Tested against a FRITZ!Box 7590 and a FRITZ!Box 6591 Cable (FRITZ!OS 8.25).
 
 New to VoIP on the FRITZ!Box? See the
 [FRITZ!Box setup guide](docs/fritzbox-setup.md).

@@ -106,4 +106,5 @@ voice2fritz connects.
 | Callers see the wrong number | Change **Outgoing number** in the FRITZ!Box device settings. |
 | Mic level bar does not move | Wrong mic chosen, or the mic is muted in your desktop's sound settings. |
 
-Menu names can differ slightly between FRITZ!OS versions.
+The steps were checked on a FRITZ!Box 6591 Cable with FRITZ!OS 8.25. Menu
+names can differ slightly between FRITZ!OS versions.

@@ -9,7 +9,7 @@ Multi-Provider-SIP-Konfiguration, nur Host, Benutzername und Passwort.
 
 ![voice2fritz Screenshot](docs/images/screenshot.png)
 
-Getestet mit einer FRITZ!Box 7590.
+Getestet mit einer FRITZ!Box 7590 und einer FRITZ!Box 6591 Cable (FRITZ!OS 8.25).
 
 Noch nie VoIP an der FRITZ!Box eingerichtet? Siehe die
 [FRITZ!Box-Einrichtungsanleitung](docs/fritzbox-setup.de.md).
