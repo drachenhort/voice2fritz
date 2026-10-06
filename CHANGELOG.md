@@ -4,12 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.14.0]
+
 ### Added
 - Setup wizard (Settings → "Setup wizard..."): explains step by step how
   to check the phone number and create an IP phone on the FRITZ!Box, then
   saves the account and shows right on the page whether the FRITZ!Box
   accepts it, sets up the headset and suggests test calls. English and
   German.
+- FRITZ!Box setup guide for first-time VoIP users
+  (`docs/fritzbox-setup.md`, German: `docs/fritzbox-setup.de.md`), linked
+  from the README. Checked on a FRITZ!Box 6591 Cable with FRITZ!OS 8.25.
 
 ## [0.13.0]
 
