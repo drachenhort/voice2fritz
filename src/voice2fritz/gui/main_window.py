@@ -28,6 +28,7 @@ from voice2fritz.gui.incoming_call_popup import IncomingCallPopup
 from voice2fritz.gui.nav_rail import NavRail
 from voice2fritz.gui.settings_panel import SettingsPanel
 from voice2fritz.i18n import current_language, set_language, tr
+from voice2fritz.registration import REGISTRATION_TIMEOUT_MS, classify_registration
 
 _T9_LETTERS = {
     "1": "", "2": "ABC", "3": "DEF",
@@ -37,10 +38,8 @@ _T9_LETTERS = {
 }
 
 _KEY_FLASH_MS = 120
-_REGISTRATION_VERIFY_TIMEOUT_MS = 20_000
 # main() relaunches the app when the event loop exits with this code.
 RESTART_EXIT_CODE = 75
-_AUTH_REJECTED_CODES = {"401", "403", "407"}
 
 
 class DialpadButton(QPushButton):
@@ -230,7 +229,7 @@ class MainWindow(QMainWindow):
         self._verifying_account: str | None = None
         self._verification_timer = QTimer(self)
         self._verification_timer.setSingleShot(True)
-        self._verification_timer.setInterval(_REGISTRATION_VERIFY_TIMEOUT_MS)
+        self._verification_timer.setInterval(REGISTRATION_TIMEOUT_MS)
         self._verification_timer.timeout.connect(self._on_verification_timeout)
         self.call_button.clicked.connect(self._on_call_button_clicked)
         self.hangup_button.clicked.connect(self._on_hangup_clicked)
@@ -306,13 +305,7 @@ class MainWindow(QMainWindow):
 
     def _on_registration_state_changed(self, text: str) -> None:
         self._set_sip_status_led(is_ok=(text == "200 OK"), text=text)
-        if text.startswith("2"):
-            self.settings_panel.set_registration_result("ok")
-        elif text.split(" ", 1)[0] in _AUTH_REJECTED_CODES:
-            self.settings_panel.set_registration_result("rejected")
-        else:
-            # Unreachable or timed out: says nothing about the password.
-            self.settings_panel.set_registration_result(None)
+        self.settings_panel.set_registration_result(classify_registration(text))
 
     def _on_registration_state_changed_verify(self, text: str) -> None:
         if self._verifying_account is None:
