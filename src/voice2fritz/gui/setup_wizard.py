@@ -116,6 +116,8 @@ class ConnectPage(QWizardPage):
         layout.addStretch()
 
         self._connected = False
+        # Registering again during a call would shut down the account carrying it.
+        self._call_active = False
         # The account of the Connect press still waiting for an answer, else None.
         self._pending: config.AccountConfig | None = None
         self._timer = QTimer(self)
@@ -139,7 +141,12 @@ class ConnectPage(QWizardPage):
         return all(edit.text().strip() for edit in (self.host_edit, self.username_edit, self.password_edit))
 
     def _update_connect_button(self) -> None:
-        self.connect_button.setEnabled(self._fields_filled() and self._pending is None)
+        self.connect_button.setEnabled(self._fields_filled() and self._pending is None and not self._call_active)
+        self.connect_button.setToolTip(tr("Not available during a call") if self._call_active else "")
+
+    def set_call_active(self, active: bool) -> None:
+        self._call_active = active
+        self._update_connect_button()
 
     def _set_status(self, text: str, color: str | None) -> None:
         self.status_label.setText(text)
@@ -316,4 +323,5 @@ class SetupWizard(QWizard):
         QDesktopServices.openUrl(QUrl(f"http://{self.connect_page.host()}"))
 
     def set_call_active(self, active: bool) -> None:
+        self.connect_page.set_call_active(active)
         self.audio_page.audio.set_call_active(active)

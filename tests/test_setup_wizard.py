@@ -355,3 +355,24 @@ def test_guide_link_is_readable_on_the_dark_theme(wizard):
     colors = {image.pixelColor(x, y).name() for x in range(image.width()) for y in range(image.height())}
 
     assert "#4a9eff" in colors
+
+
+def test_connect_is_disabled_during_a_call(wizard):
+    page = wizard.connect_page
+    _fill(page)
+
+    wizard.set_call_active(True)
+    assert not page.connect_button.isEnabled()
+    assert page.connect_button.toolTip() == "Not available during a call"
+
+    wizard.set_call_active(False)
+    assert page.connect_button.isEnabled()
+    assert page.connect_button.toolTip() == ""
+
+
+def test_typing_during_a_call_keeps_connect_disabled(wizard):
+    wizard.set_call_active(True)
+
+    _fill(wizard.connect_page)
+
+    assert not wizard.connect_page.connect_button.isEnabled()
