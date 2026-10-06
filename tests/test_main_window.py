@@ -1159,3 +1159,16 @@ def test_registration_popups_return_after_the_wizard_closes(qtbot):
     engine.registrationFailed.emit("Authorization failed")
 
     assert window._registration_error_box.isVisible()
+
+
+def test_pending_settings_verification_ignores_wizard_result(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    _save_account(window, monkeypatch)  # Settings Save still waiting for an answer
+    window.open_setup_wizard()
+
+    engine.registrationStateChanged.emit("200 OK")  # the wizard's Connect
+
+    assert not hasattr(window, "_verification_success_box")
+    assert not window._verification_timer.isActive()

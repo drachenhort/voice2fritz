@@ -397,6 +397,8 @@ class MainWindow(QMainWindow):
             self._setup_wizard.raise_()
             self._setup_wizard.activateWindow()
             return
+        # A Save still being verified would otherwise take the wizard's result as its own.
+        self._finish_verification()
         # Not modal: during a call that arrives meanwhile, Hang up must stay reachable.
         self._setup_wizard = SetupWizard(self.sip_engine, self)
         self._setup_wizard.finished.connect(self._on_setup_wizard_finished)
