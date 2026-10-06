@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Setup wizard (Settings → "Setup wizard..."): explains step by step how
+  to check the phone number and create an IP phone on the FRITZ!Box, then
+  saves the account and shows right on the page whether the FRITZ!Box
+  accepts it, sets up the headset and suggests test calls. English and
+  German.
+
 ## [0.13.0]
 
 ### Added
