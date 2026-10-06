@@ -128,6 +128,22 @@ _GERMAN = {
     "Virtual network": "Virtuelles Netzwerk",
     "Loopback": "Loopback",
     "Unknown": "Unbekannt",
+    # Setup wizard (voice2fritz.gui.setup_wizard)
+    "Connect": "Verbinden",
+    "Enter the username and password of the IP phone you just created.":
+        "Gib Benutzername und Kennwort des eben angelegten IP-Telefons ein.",
+    "Connecting...": "Verbinde...",
+    "Connected as {account}.": "Verbunden als {account}.",
+    "The FRITZ!Box rejected the login. Use the username and password of the IP phone, not the FRITZ!Box login.":
+        "Die FRITZ!Box hat die Anmeldung abgelehnt. Verwende Benutzername und Kennwort des IP-Telefons, "
+        "nicht die Anmeldung an der FRITZ!Box.",
+    "Could not connect: {detail}. Check the host, and that this computer is not on the guest WLAN.":
+        "Verbindung fehlgeschlagen: {detail}. Prüfe den Host und dass dieser Computer nicht im Gast-WLAN ist.",
+    "No answer from {host}. Try 192.168.178.1, and check that this computer is not on the guest WLAN.":
+        "Keine Antwort von {host}. Versuche 192.168.178.1 und prüfe, dass dieser Computer nicht im Gast-WLAN ist.",
+    "Call audio goes through the VPN; the FRITZ!Box may not reach it. Turn off the VPN and restart voice2fritz.":
+        "Der Anrufton läuft über das VPN; die FRITZ!Box erreicht ihn eventuell nicht. "
+        "Schalte das VPN aus und starte voice2fritz neu.",
 }
 
 _language = DEFAULT_LANGUAGE
