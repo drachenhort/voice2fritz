@@ -42,6 +42,13 @@ def save_config(cfg: AccountConfig, path: Path = DEFAULT_CONFIG_PATH) -> None:
     _write_raw(data, path)
 
 
+def save_account(cfg: AccountConfig, password: str, path: Path = DEFAULT_CONFIG_PATH) -> None:
+    """Save the account; an empty password keeps the one already in the keyring."""
+    save_config(cfg, path)
+    if password:
+        set_password(cfg.username, password)
+
+
 def load_device_selection(path: Path = DEFAULT_CONFIG_PATH) -> tuple[str | None, str | None]:
     data = _read_raw(path)
     return data.get("capture_device"), data.get("playback_device")

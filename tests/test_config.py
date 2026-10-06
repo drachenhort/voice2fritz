@@ -1,5 +1,6 @@
 import json
 
+from voice2fritz import config
 from voice2fritz.config import (
     AccountConfig,
     load_config,
@@ -203,3 +204,23 @@ def test_save_contacts_sort_order_preserves_existing_account(tmp_path):
 
     assert load_config(path) == cfg
     assert load_contacts_sort_order(path) == "number"
+
+
+def test_save_account_writes_config_and_password(tmp_path, monkeypatch):
+    stored = {}
+    monkeypatch.setattr(config, "set_password", lambda username, password: stored.update({username: password}))
+    path = tmp_path / "config.json"
+
+    config.save_account(config.AccountConfig(host="fritz.box", username="620"), "secret12", path=path)
+
+    assert config.load_config(path) == config.AccountConfig(host="fritz.box", username="620")
+    assert stored == {"620": "secret12"}
+
+
+def test_save_account_with_empty_password_keeps_saved_password(tmp_path, monkeypatch):
+    stored = {}
+    monkeypatch.setattr(config, "set_password", lambda username, password: stored.update({username: password}))
+
+    config.save_account(config.AccountConfig(host="fritz.box", username="620"), "", path=tmp_path / "config.json")
+
+    assert stored == {}

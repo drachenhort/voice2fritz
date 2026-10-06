@@ -231,11 +231,9 @@ class SettingsPanel(QWidget):
             host=self.host_edit.text(),
             username=self.username_edit.text(),
         )
-        config.save_config(cfg)
-        if self.password_edit.text():
-            config.set_password(cfg.username, self.password_edit.text())
-            # Never leave the password on screen; the hint reports its status instead.
-            self.password_edit.clear()
+        config.save_account(cfg, self.password_edit.text())
+        # Never leave the password on screen; the hint reports its status instead.
+        self.password_edit.clear()
         self._password_status = None
         self._update_password_hint()
         config.save_google_sync_overwrites_local(self.google_priority_checkbox.isChecked())
