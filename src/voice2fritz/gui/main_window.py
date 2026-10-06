@@ -27,6 +27,7 @@ from voice2fritz.gui.contacts_panel import ContactsPanel
 from voice2fritz.gui.incoming_call_popup import IncomingCallPopup
 from voice2fritz.gui.nav_rail import NavRail
 from voice2fritz.gui.settings_panel import SettingsPanel
+from voice2fritz.gui.setup_wizard import SetupWizard
 from voice2fritz.i18n import current_language, set_language, tr
 from voice2fritz.registration import REGISTRATION_TIMEOUT_MS, classify_registration
 
@@ -176,6 +177,7 @@ class MainWindow(QMainWindow):
         self.contacts_panel.contactActivated.connect(self._on_contact_activated)
         self.settings_panel.accountSaved.connect(self._on_account_saved)
         self.settings_panel.languageChanged.connect(self._on_language_changed)
+        self.settings_panel.setupWizardRequested.connect(self.open_setup_wizard)
 
         self.sip_status_led = QLabel()
         self.sip_status_led.setFixedSize(14, 14)
@@ -226,6 +228,7 @@ class MainWindow(QMainWindow):
         self.tray_icon.show()
 
     def _connect_signals(self) -> None:
+        self._setup_wizard: SetupWizard | None = None
         self._verifying_account: str | None = None
         self._verification_timer = QTimer(self)
         self._verification_timer.setSingleShot(True)
@@ -344,6 +347,9 @@ class MainWindow(QMainWindow):
         )
 
     def _show_registration_error(self, headline: str, message: str) -> None:
+        if self._setup_wizard is not None:
+            # The wizard shows registration results on its own page.
+            return
         # PJSIP keeps retrying registration; reuse the open box instead of stacking new ones.
         box = getattr(self, "_registration_error_box", None)
         if box is not None and box.isVisible():
@@ -385,6 +391,21 @@ class MainWindow(QMainWindow):
         settings_index = self.pages.indexOf(self.settings_panel)
         self.pages.setCurrentIndex(settings_index)
         self.nav_rail.set_current_index(settings_index)
+
+    def open_setup_wizard(self) -> None:
+        if self._setup_wizard is not None:
+            self._setup_wizard.raise_()
+            self._setup_wizard.activateWindow()
+            return
+        # Not modal: during a call that arrives meanwhile, Hang up must stay reachable.
+        self._setup_wizard = SetupWizard(self.sip_engine, self)
+        self._setup_wizard.finished.connect(self._on_setup_wizard_finished)
+        self._setup_wizard.show()
+
+    def _on_setup_wizard_finished(self) -> None:
+        self._setup_wizard.deleteLater()
+        self._setup_wizard = None
+        self.settings_panel.reload()
 
     def _on_call_state_changed(self, text: str) -> None:
         self.call_details.set_state_text(tr(text))
@@ -453,6 +474,8 @@ class MainWindow(QMainWindow):
         self.call_button.setProperty("callActive", active)
         self.call_button.style().unpolish(self.call_button)
         self.call_button.style().polish(self.call_button)
+        if self._setup_wizard is not None:
+            self._setup_wizard.set_call_active(active)
 
     def _on_mute_clicked(self) -> None:
         if self._active_call is not None:

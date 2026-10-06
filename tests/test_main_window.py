@@ -7,12 +7,18 @@ from voice2fritz import contacts as contacts_module
 from voice2fritz import ringtone
 from voice2fritz.audio import AudioDevice
 from voice2fritz.gui.main_window import MainWindow
+from voice2fritz.gui.setup_wizard import SetupWizard
 
 
 @pytest.fixture(autouse=True)
 def no_device_persistence(monkeypatch):
     monkeypatch.setattr(config_module, "load_device_selection", lambda path=config_module.DEFAULT_CONFIG_PATH: (None, None))
     monkeypatch.setattr(config_module, "save_device_selection", lambda capture, playback, path=config_module.DEFAULT_CONFIG_PATH: None)
+
+
+@pytest.fixture(autouse=True)
+def no_saved_account(monkeypatch):
+    monkeypatch.setattr(config_module, "load_config", lambda path=config_module.DEFAULT_CONFIG_PATH: None)
 
 
 @pytest.fixture(autouse=True)
@@ -1074,3 +1080,82 @@ def test_registration_result_reaches_settings_password_hint(qtbot, monkeypatch, 
     engine.registrationStateChanged.emit(state)
 
     assert results == [expected]
+
+
+def test_settings_button_opens_setup_wizard(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.settings_panel.setup_wizard_button.click()
+
+    assert isinstance(window._setup_wizard, SetupWizard)
+    assert window._setup_wizard.isVisible()
+    assert not window._setup_wizard.isModal()
+
+
+def test_second_request_reuses_the_open_wizard(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+
+    window.open_setup_wizard()
+    first = window._setup_wizard
+    window.open_setup_wizard()
+
+    assert window._setup_wizard is first
+
+
+def test_registration_failure_during_wizard_shows_no_popup(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.open_setup_wizard()
+
+    engine.registrationStateChanged.emit("401 Unauthorized")
+    engine.registrationFailed.emit("Authorization failed for 620@fritz.box: 401 Unauthorized")
+
+    assert not hasattr(window, "_registration_error_box")
+    assert window.sip_status_led.toolTip() == "401 Unauthorized"
+
+
+def test_call_during_wizard_stops_its_echo_test(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.open_setup_wizard()
+    audio = window._setup_wizard.audio_page.audio
+    audio.echo_test_button.click()
+
+    window.number_edit.setText("01234567")
+    window.call_button.click()
+
+    assert audio.echo_test_status.text() == "Test cancelled."
+    assert not audio.echo_test_button.isEnabled()
+    assert window.hangup_button.isEnabled()
+
+
+def test_closing_the_wizard_reloads_settings(qtbot, monkeypatch):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    reloads = []
+    monkeypatch.setattr(window.settings_panel, "reload", lambda: reloads.append(True))
+    window.open_setup_wizard()
+
+    window._setup_wizard.reject()
+
+    assert reloads == [True]
+    assert window._setup_wizard is None
+
+
+def test_registration_popups_return_after_the_wizard_closes(qtbot):
+    engine = FakeSipEngine()
+    window = MainWindow(engine)
+    qtbot.addWidget(window)
+    window.open_setup_wizard()
+    window._setup_wizard.reject()
+
+    engine.registrationFailed.emit("Authorization failed")
+
+    assert window._registration_error_box.isVisible()
