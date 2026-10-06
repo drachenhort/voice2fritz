@@ -339,3 +339,19 @@ def test_guide_link_follows_the_language():
         assert setup_wizard_module.guide_url().endswith("/docs/fritzbox-setup.de.md#fehlersuche")
     finally:
         set_language("en")
+
+
+def test_guide_link_is_readable_on_the_dark_theme(wizard):
+    from PySide6.QtWidgets import QLabel
+
+    from voice2fritz.gui import theme
+
+    wizard.setStyleSheet(theme.DARK_STYLESHEET)
+    done_page = wizard.page(wizard.pageIds()[-1])
+    link_label = next(label for label in done_page.findChildren(QLabel) if "href" in label.text())
+    link_label.resize(link_label.sizeHint())
+
+    image = link_label.grab().toImage()
+    colors = {image.pixelColor(x, y).name() for x in range(image.width()) for y in range(image.height())}
+
+    assert "#4a9eff" in colors

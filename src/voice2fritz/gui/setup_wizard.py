@@ -21,6 +21,8 @@ DEFAULT_HOST = "fritz.box"
 _GREEN = "#2fa84f"
 _RED = "#d0453a"
 _ORANGE = "#d08a2c"
+# The theme's accent; the default link blue is unreadable on the dark background.
+_LINK = "#4a9eff"
 _GUIDE_BASE_URL = "https://github.com/drachenhort/voice2fritz/blob/master/docs/"
 
 
@@ -32,7 +34,8 @@ def guide_url() -> str:
 
 
 def _text_label(html: str) -> QLabel:
-    label = QLabel(html)
+    # The app stylesheet overrides a palette link colour; only inline style survives.
+    label = QLabel(html.replace("<a ", f'<a style="color: {_LINK};" '))
     label.setWordWrap(True)
     label.setOpenExternalLinks(True)
     return label
