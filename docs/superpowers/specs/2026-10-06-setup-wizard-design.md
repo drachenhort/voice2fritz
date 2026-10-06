@@ -170,11 +170,15 @@ owns a single-shot `QTimer` with `REGISTRATION_TIMEOUT_MS`.
 ### `SettingsPanel.reload()` (new)
 
 Reloads host and username from `config.load_config()`, updates the
-password hint, shows the saved device choices in the combos
-(`AudioSetupWidget.show_saved_devices()`), and restarts the mic level
-monitor if Settings is visible (`AudioSetupWidget.resume_level_monitor()`).
-The restart is needed because the wizard's audio page stops the shared
-level monitor when it hides, even though Settings is still on screen.
+password hint, and shows the saved device choices in the combos
+(`AudioSetupWidget.show_saved_devices()`).
+
+The mic level monitor is shared by Settings and the wizard's audio page.
+`SipEngine` counts its users: `start_level_monitor` adds one,
+`stop_level_monitor` removes one, and the monitor only stops when the last
+user is gone (`stop()` releases it regardless). Each `AudioSetupWidget`
+keeps its start and stop calls paired, so one widget hiding never silences
+the other.
 
 ## Translations
 

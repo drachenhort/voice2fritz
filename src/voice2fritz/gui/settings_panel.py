@@ -144,7 +144,6 @@ class SettingsPanel(QWidget):
         self._password_status = None
         self._update_password_hint()
         self.audio.show_saved_devices()
-        self.audio.resume_level_monitor()
         self.update_call_audio_ip()
 
     def _update_password_hint(self) -> None:

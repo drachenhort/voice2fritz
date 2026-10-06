@@ -338,13 +338,14 @@ def test_reload_shows_account_saved_elsewhere(panel, monkeypatch):
     assert panel.password_edit.placeholderText() == "Password saved (not tested yet)"
 
 
-def test_reload_restarts_level_monitor_stopped_by_another_window(panel):
+def test_audio_widget_stops_the_monitor_only_once(panel):
+    from PySide6.QtGui import QHideEvent
+
     panel.show()
-    panel.sip_engine.stop_level_monitor()  # what the wizard's audio page does when it hides
+    panel.audio.hideEvent(QHideEvent())
+    panel.audio.hideEvent(QHideEvent())  # e.g. minimized, then the page switched
 
-    panel.reload()
-
-    assert panel.sip_engine.events[-1] == "monitor on"
+    assert panel.sip_engine.events.count("monitor off") == 1
 
 
 def test_reload_shows_devices_chosen_elsewhere(qtbot, monkeypatch, finalized_wav, recorded_peak):

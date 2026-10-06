@@ -64,6 +64,8 @@ class AudioSetupWidget(QWidget):
         self._level_timer = QTimer(self)
         self._level_timer.setInterval(_LEVEL_POLL_MS)
         self._level_timer.timeout.connect(self._update_mic_level)
+        # The engine counts monitor users, so start and stop must stay paired.
+        self._monitoring = False
 
         self._call_active = False
         self._echo_stage: str | None = None
@@ -75,21 +77,19 @@ class AudioSetupWidget(QWidget):
     def showEvent(self, event) -> None:
         super().showEvent(event)
         # Only hold the mic open while the widget is on screen.
-        self.sip_engine.start_level_monitor()
+        if not self._monitoring:
+            self._monitoring = True
+            self.sip_engine.start_level_monitor()
         self._level_timer.start()
 
     def hideEvent(self, event) -> None:
         super().hideEvent(event)
         self._level_timer.stop()
-        self.sip_engine.stop_level_monitor()
+        if self._monitoring:
+            self._monitoring = False
+            self.sip_engine.stop_level_monitor()
         self.mic_level_bar.setValue(0)
         self._abort_echo_test()
-
-    def resume_level_monitor(self) -> None:
-        """Restart the level meter if on screen; another widget may have stopped the shared monitor."""
-        if self.isVisible():
-            self.sip_engine.start_level_monitor()
-            self._level_timer.start()
 
     def show_saved_devices(self) -> None:
         """Select the saved devices in the combos, e.g. after another window changed them."""

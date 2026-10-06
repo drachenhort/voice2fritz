@@ -136,6 +136,8 @@ class SipEngine(QObject):
         self.media_address: str | None = None
         self._pulse_device_index: int | None = None
         self._level_meter: _LevelMeterPort | None = None
+        # Settings and the setup wizard each hold the level monitor while on screen.
+        self._level_monitor_users = 0
         self._echo_recorder: pj.AudioMediaRecorder | None = None
         self._echo_player: pj.AudioMediaPlayer | None = None
         self._ringback: pj.ToneGenerator | None = None
@@ -151,7 +153,8 @@ class SipEngine(QObject):
 
     def stop(self) -> None:
         if self._ep is not None:
-            self.stop_level_monitor()
+            self._level_monitor_users = 0
+            self._release_level_meter()
             self.stop_echo_recording()
             self.stop_echo_playback()
             self.stop_ringback()
@@ -282,6 +285,7 @@ class SipEngine(QObject):
     def start_level_monitor(self) -> None:
         if self._ep is None:
             raise RuntimeError("call start() first")
+        self._level_monitor_users += 1
         if self._level_meter is not None:
             return
         fmt = pj.MediaFormatAudio()
@@ -296,6 +300,11 @@ class SipEngine(QObject):
         self._level_meter = meter
 
     def stop_level_monitor(self) -> None:
+        self._level_monitor_users = max(0, self._level_monitor_users - 1)
+        if self._level_monitor_users == 0:
+            self._release_level_meter()
+
+    def _release_level_meter(self) -> None:
         if self._level_meter is None:
             return
         self._ep.audDevManager().getCaptureDevMedia().stopTransmit(self._level_meter)
