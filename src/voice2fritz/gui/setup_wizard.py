@@ -287,7 +287,7 @@ class SetupWizard(QWizard):
                     tr("Choose <b>Telephone (with and without answering machine)</b> and click <b>Next</b>."),
                     tr("Choose <b>LAN/WLAN (IP telephone)</b> and click <b>Next</b>."),
                     tr("Enter a name, for example <b>voice2fritz</b>."),
-                    tr("Choose a <b>username</b> and a <b>password</b>, and write both down."),
+                    tr("Choose a <b>username</b> and a <b>password</b>, write both down, then click <b>Next</b>."),
                     tr("Choose the <b>outgoing number</b> that people see when you call them."),
                     tr("Choose which <b>incoming calls</b> should ring in voice2fritz."),
                     tr("Finish the wizard. You may need to confirm with a button press on the box or on a DECT handset."),

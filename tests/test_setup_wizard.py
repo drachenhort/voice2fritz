@@ -376,3 +376,12 @@ def test_typing_during_a_call_keeps_connect_disabled(wizard):
     _fill(wizard.connect_page)
 
     assert not wizard.connect_page.connect_button.isEnabled()
+
+
+def test_ip_phone_steps_say_to_click_next_after_the_credentials(wizard):
+    from PySide6.QtWidgets import QLabel
+
+    ip_phone_page = wizard.page(wizard.pageIds()[2])
+    steps = ip_phone_page.findChildren(QLabel)[0].text()
+
+    assert "write both down, then click <b>Next</b>." in steps

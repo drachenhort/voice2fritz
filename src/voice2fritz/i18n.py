@@ -182,8 +182,8 @@ _GERMAN = {
     "Choose <b>LAN/WLAN (IP telephone)</b> and click <b>Next</b>.":
         "<b>LAN/WLAN (IP-Telefon)</b> wählen und <b>Weiter</b> klicken.",
     "Enter a name, for example <b>voice2fritz</b>.": "Einen Namen eingeben, zum Beispiel <b>voice2fritz</b>.",
-    "Choose a <b>username</b> and a <b>password</b>, and write both down.":
-        "<b>Benutzername</b> und <b>Kennwort</b> festlegen und beides aufschreiben.",
+    "Choose a <b>username</b> and a <b>password</b>, write both down, then click <b>Next</b>.":
+        "<b>Benutzername</b> und <b>Kennwort</b> festlegen, beides aufschreiben und dann <b>Weiter</b> klicken.",
     "Choose the <b>outgoing number</b> that people see when you call them.":
         "Die <b>ausgehende Rufnummer</b> wählen, die Angerufene sehen.",
     "Choose which <b>incoming calls</b> should ring in voice2fritz.":

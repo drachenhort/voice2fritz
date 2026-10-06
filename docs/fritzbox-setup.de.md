@@ -54,6 +54,7 @@ Anbieterdaten, und das hat mit voice2fritz nichts zu tun.
    - Als Benutzernamen nimmst du, was die Box vorschlägt oder zulässt.
    - Ein starkes Kennwort mit mindestens 8 Zeichen wählen. Beides
      aufschreiben.
+   - **Weiter** klicken.
 7. **Ausgehende Rufnummer:** die Nummer wählen, die Angerufene sehen
    sollen.
 8. **Ankommende Anrufe:** wählen, auf welche Rufnummern voice2fritz
