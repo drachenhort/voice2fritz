@@ -1,6 +1,7 @@
 import pytest
 
 from voice2fritz import config
+from voice2fritz.gui import audio_setup_widget as audio_setup_widget_module
 from voice2fritz.gui import settings_panel as settings_panel_module
 from voice2fritz.gui.settings_panel import SettingsPanel
 from voice2fritz.sip_engine import peak_to_level
@@ -58,14 +59,14 @@ def no_device_persistence(monkeypatch):
 @pytest.fixture
 def finalized_wav(monkeypatch):
     state = {"ready": True}
-    monkeypatch.setattr(settings_panel_module, "wav_is_finalized", lambda path: state["ready"])
+    monkeypatch.setattr(audio_setup_widget_module, "wav_is_finalized", lambda path: state["ready"])
     return state
 
 
 @pytest.fixture
 def recorded_peak(monkeypatch):
     state = {"peak": 12000}
-    monkeypatch.setattr(settings_panel_module, "wav_peak", lambda path: state["peak"])
+    monkeypatch.setattr(audio_setup_widget_module, "wav_peak", lambda path: state["peak"])
     return state
 
 
@@ -87,7 +88,7 @@ def test_level_monitor_runs_only_while_panel_is_shown(panel):
 
 def test_mic_level_bar_follows_engine_level(panel):
     panel.sip_engine.level = 0.42
-    panel._update_mic_level()
+    panel.audio._update_mic_level()
 
     assert panel.mic_level_bar.value() == 42
 
@@ -98,15 +99,15 @@ def test_echo_test_records_then_plays_back(panel):
     assert not panel.echo_test_button.isEnabled()
     assert panel.echo_test_status.text().startswith("Recording")
 
-    panel._advance_echo_test()
+    panel.audio._advance_echo_test()
     assert panel.sip_engine.events[-1] == "stop record"
     assert panel.echo_test_status.text().startswith("Preparing")
 
-    panel._advance_echo_test()
+    panel.audio._advance_echo_test()
     assert panel.sip_engine.events[-1] == "play"
     assert panel.echo_test_status.text().startswith("Playing")
 
-    panel._advance_echo_test()
+    panel.audio._advance_echo_test()
     assert "stop play" in panel.sip_engine.events
     assert panel.echo_test_button.isEnabled()
     assert panel.echo_test_status.text().startswith("Done")
@@ -115,24 +116,24 @@ def test_echo_test_records_then_plays_back(panel):
 def test_echo_test_waits_for_recorder_to_finish_file(panel, finalized_wav):
     finalized_wav["ready"] = False
     panel.echo_test_button.click()
-    panel._advance_echo_test()  # stop recording
+    panel.audio._advance_echo_test()  # stop recording
 
-    panel._advance_echo_test()  # file not finished yet
+    panel.audio._advance_echo_test()  # file not finished yet
     assert "play" not in panel.sip_engine.events
     assert panel.echo_test_status.text().startswith("Preparing")
 
     finalized_wav["ready"] = True
-    panel._advance_echo_test()
+    panel.audio._advance_echo_test()
     assert panel.sip_engine.events[-1] == "play"
 
 
 def test_echo_test_gives_up_when_file_never_finishes(panel, finalized_wav):
     finalized_wav["ready"] = False
     panel.echo_test_button.click()
-    panel._advance_echo_test()
+    panel.audio._advance_echo_test()
 
-    for _ in range(settings_panel_module._ECHO_FINALIZE_MAX_POLLS):
-        panel._advance_echo_test()
+    for _ in range(audio_setup_widget_module._ECHO_FINALIZE_MAX_POLLS):
+        panel.audio._advance_echo_test()
 
     assert panel.echo_test_status.text() == "Test failed: the recording was not saved."
     assert panel.echo_test_button.isEnabled()
@@ -141,8 +142,8 @@ def test_echo_test_gives_up_when_file_never_finishes(panel, finalized_wav):
 def test_silent_recording_warns_instead_of_playing(panel, recorded_peak):
     recorded_peak["peak"] = 13  # what a muted headset mic delivered
     panel.echo_test_button.click()
-    panel._advance_echo_test()
-    panel._advance_echo_test()
+    panel.audio._advance_echo_test()
+    panel.audio._advance_echo_test()
 
     assert "play" not in panel.sip_engine.events
     assert panel.echo_test_status.text() == "Recorded only silence - is the mic muted?"
