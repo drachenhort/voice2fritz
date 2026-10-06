@@ -11,6 +11,9 @@ Multi-Provider-SIP-Konfiguration, nur Host, Benutzername und Passwort.
 
 Getestet mit einer FRITZ!Box 7590.
 
+Noch nie VoIP an der FRITZ!Box eingerichtet? Siehe die
+[FRITZ!Box-Einrichtungsanleitung](docs/fritzbox-setup.de.md).
+
 Siehe [CHANGELOG.md](CHANGELOG.md) für die Versionshistorie. Lizenziert
 unter der [GNU General Public License v3.0 oder neuer](LICENSE).
 

@@ -11,6 +11,9 @@ password.
 
 Tested against a FRITZ!Box 7590.
 
+New to VoIP on the FRITZ!Box? See the
+[FRITZ!Box setup guide](docs/fritzbox-setup.md).
+
 See [CHANGELOG.md](CHANGELOG.md) for release notes. Licensed under the
 [GNU General Public License v3.0 or later](LICENSE).
 
