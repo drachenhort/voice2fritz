@@ -308,3 +308,58 @@ def test_choosing_a_language_other_than_the_system_one_stops_the_startup_offer(p
     panel.language_combo.setCurrentIndex(panel.language_combo.findData("en"))
 
     assert declined == ["de"]
+
+
+def test_setup_wizard_button_requests_the_wizard(panel, qtbot):
+    with qtbot.waitSignal(panel.setupWizardRequested, timeout=1000):
+        panel.setup_wizard_button.click()
+
+
+def test_setup_wizard_button_is_disabled_during_call(panel):
+    panel.set_call_active(True)
+    assert not panel.setup_wizard_button.isEnabled()
+    assert panel.setup_wizard_button.toolTip() == "Not available during a call"
+
+    panel.set_call_active(False)
+    assert panel.setup_wizard_button.isEnabled()
+    assert panel.setup_wizard_button.toolTip() == ""
+
+
+def test_reload_shows_account_saved_elsewhere(panel, monkeypatch):
+    monkeypatch.setattr(
+        config, "load_config", lambda path=config.DEFAULT_CONFIG_PATH: config.AccountConfig("192.168.178.1", "620")
+    )
+    monkeypatch.setattr(config, "get_password", lambda username: "secret12")
+
+    panel.reload()
+
+    assert panel.host_edit.text() == "192.168.178.1"
+    assert panel.username_edit.text() == "620"
+    assert panel.password_edit.placeholderText() == "Password saved (not tested yet)"
+
+
+def test_reload_restarts_level_monitor_stopped_by_another_window(panel):
+    panel.show()
+    panel.sip_engine.stop_level_monitor()  # what the wizard's audio page does when it hides
+
+    panel.reload()
+
+    assert panel.sip_engine.events[-1] == "monitor on"
+
+
+def test_reload_shows_devices_chosen_elsewhere(qtbot, monkeypatch, finalized_wav, recorded_peak):
+    from voice2fritz.audio import AudioDevice
+
+    engine = _RecordingEngine()
+    engine.list_devices = lambda: [
+        AudioDevice(id=0, name="Built-in Mic", has_input=True, has_output=False),
+        AudioDevice(id=1, name="Headset", has_input=True, has_output=True),
+    ]
+    panel = SettingsPanel(engine)
+    qtbot.addWidget(panel)
+    monkeypatch.setattr(config, "load_device_selection", lambda path=config.DEFAULT_CONFIG_PATH: ("Headset", "Headset"))
+
+    panel.reload()
+
+    assert panel.capture_combo.currentText() == "Headset"
+    assert panel.speaker_combo.currentText() == "Headset"

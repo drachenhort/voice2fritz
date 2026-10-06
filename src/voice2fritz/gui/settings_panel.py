@@ -19,11 +19,13 @@ from voice2fritz.i18n import LANGUAGES, language_from_locale, tr
 class SettingsPanel(QWidget):
     accountSaved = Signal(config.AccountConfig)
     languageChanged = Signal(str)
+    setupWizardRequested = Signal()
 
     def __init__(self, sip_engine, parent=None):
         super().__init__(parent)
         self.sip_engine = sip_engine
 
+        self.setup_wizard_button = QPushButton(tr("Setup wizard..."))
         self.host_edit = QLineEdit()
         self.username_edit = QLineEdit()
         self.password_edit = QLineEdit()
@@ -64,6 +66,7 @@ class SettingsPanel(QWidget):
         other_form.addRow(tr("Language"), self.language_combo)
 
         layout = QVBoxLayout(self)
+        layout.addWidget(self.setup_wizard_button)
         layout.addLayout(account_form)
         layout.addWidget(self.audio)
         layout.addLayout(other_form)
@@ -72,6 +75,7 @@ class SettingsPanel(QWidget):
         layout.addStretch()
 
         self.save_button.clicked.connect(self._on_save)
+        self.setup_wizard_button.clicked.connect(self.setupWizardRequested)
 
         self.username_edit.textChanged.connect(self._update_password_hint)
         self._update_password_hint()
@@ -108,6 +112,8 @@ class SettingsPanel(QWidget):
         # Switching language restarts the app, which would drop the call.
         self.language_combo.setEnabled(not active)
         self.language_combo.setToolTip(tr("Not available during a call") if active else "")
+        self.setup_wizard_button.setEnabled(not active)
+        self.setup_wizard_button.setToolTip(tr("Not available during a call") if active else "")
 
     def _on_save(self) -> None:
         cfg = config.AccountConfig(
@@ -128,6 +134,18 @@ class SettingsPanel(QWidget):
         """Report how the FRITZ!Box answered the saved password: "ok", "rejected" or None (unknown)."""
         self._password_status = status
         self._update_password_hint()
+
+    def reload(self) -> None:
+        """Show what another window (the setup wizard) saved."""
+        account = config.load_config()
+        if account is not None:
+            self.host_edit.setText(account.host)
+            self.username_edit.setText(account.username)
+        self._password_status = None
+        self._update_password_hint()
+        self.audio.show_saved_devices()
+        self.audio.resume_level_monitor()
+        self.update_call_audio_ip()
 
     def _update_password_hint(self) -> None:
         username = self.username_edit.text()

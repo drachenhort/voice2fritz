@@ -102,6 +102,7 @@ _GERMAN = {
     "Call audio IP": "IP für Anrufton",
     "Language": "Sprache",
     "Save": "Speichern",
+    "Setup wizard...": "Einrichtungsassistent...",
     "Google sync overwrites local contacts with the same name":
         "Google-Synchronisierung überschreibt lokale Kontakte mit gleichem Namen",
     "Live microphone level": "Aktueller Mikrofonpegel",
