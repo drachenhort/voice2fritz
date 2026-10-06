@@ -1,9 +1,12 @@
 import pytest
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QWizard
 
 from voice2fritz import config
 from voice2fritz.gui import setup_wizard as setup_wizard_module
-from voice2fritz.gui.setup_wizard import ConnectPage
+from voice2fritz.gui.audio_setup_widget import AudioSetupWidget
+from voice2fritz.gui.setup_wizard import ConnectPage, SetupWizard
+from voice2fritz.i18n import set_language
 from voice2fritz.network import AddressInfo
 
 
@@ -240,3 +243,99 @@ def test_result_arriving_after_an_edit_is_ignored(page, engine):
     assert not page.isComplete()
     assert not page._timer.isActive()
     assert page.connect_button.isEnabled()
+
+
+@pytest.fixture
+def wizard(qtbot, engine):
+    wizard = SetupWizard(engine)
+    qtbot.addWidget(wizard)
+    return wizard
+
+
+@pytest.fixture
+def opened_urls(monkeypatch):
+    urls = []
+    monkeypatch.setattr(setup_wizard_module.QDesktopServices, "openUrl", staticmethod(lambda url: urls.append(url.toString())))
+    return urls
+
+
+def test_wizard_has_six_pages_in_order(wizard):
+    titles = [wizard.page(page_id).title() for page_id in wizard.pageIds()]
+    assert titles == ["Welcome", "Check your phone number", "Create an IP phone", "Connect", "Audio", "Done"]
+
+
+def test_wizard_is_not_modal(wizard):
+    assert not wizard.isModal()
+
+
+def test_next_is_blocked_on_connect_page_until_connected(wizard, engine):
+    wizard.show()
+    for _ in range(3):
+        wizard.next()
+    assert wizard.currentPage() is wizard.connect_page
+    assert not wizard.button(QWizard.WizardButton.NextButton).isEnabled()
+
+    _fill(wizard.connect_page)
+    wizard.connect_page.connect_button.click()
+    engine.registrationStateChanged.emit("200 OK")
+
+    assert wizard.button(QWizard.WizardButton.NextButton).isEnabled()
+    wizard.next()
+    assert wizard.currentPage() is wizard.audio_page
+
+
+def test_back_works_on_connect_page(wizard):
+    wizard.show()
+    for _ in range(3):
+        wizard.next()
+
+    wizard.back()
+
+    assert wizard.currentPage().title() == "Create an IP phone"
+
+
+def test_open_fritzbox_uses_the_host_field(wizard, opened_urls):
+    wizard.connect_page.host_edit.setText(" 192.168.178.1 ")
+
+    wizard.open_fritzbox()
+
+    assert opened_urls == ["http://192.168.178.1"]
+
+
+def test_open_fritzbox_falls_back_to_fritz_box(wizard, opened_urls):
+    wizard.connect_page.host_edit.setText("")
+
+    wizard.open_fritzbox()
+
+    assert opened_urls == ["http://fritz.box"]
+
+
+def test_info_pages_have_an_open_fritzbox_button(wizard, opened_urls):
+    page = wizard.page(wizard.pageIds()[1])
+
+    page.open_button.click()
+
+    assert opened_urls == ["http://fritz.box"]
+
+
+def test_audio_page_holds_the_audio_widget(wizard):
+    assert isinstance(wizard.audio_page.audio, AudioSetupWidget)
+
+
+def test_call_stops_the_wizard_echo_test(wizard, engine):
+    audio = wizard.audio_page.audio
+    audio.echo_test_button.click()
+
+    wizard.set_call_active(True)
+
+    assert audio.echo_test_status.text() == "Test cancelled."
+    assert not audio.echo_test_button.isEnabled()
+
+
+def test_guide_link_follows_the_language():
+    try:
+        assert setup_wizard_module.guide_url().endswith("/docs/fritzbox-setup.md#troubleshooting")
+        set_language("de")
+        assert setup_wizard_module.guide_url().endswith("/docs/fritzbox-setup.de.md#fehlersuche")
+    finally:
+        set_language("en")

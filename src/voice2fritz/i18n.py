@@ -144,6 +144,70 @@ _GERMAN = {
     "Call audio goes through the VPN; the FRITZ!Box may not reach it. Turn off the VPN and restart voice2fritz.":
         "Der Anrufton läuft über das VPN; die FRITZ!Box erreicht ihn eventuell nicht. "
         "Schalte das VPN aus und starte voice2fritz neu.",
+    "voice2fritz setup": "voice2fritz einrichten",
+    "Back": "Zurück",
+    "Next": "Weiter",
+    "Finish": "Fertigstellen",
+    "Open FRITZ!Box": "FRITZ!Box öffnen",
+    "Welcome": "Willkommen",
+    "This wizard connects voice2fritz to your FRITZ!Box as an IP phone, step by step. Before you start, check that:":
+        "Dieser Assistent verbindet voice2fritz Schritt für Schritt als IP-Telefon mit deiner FRITZ!Box. "
+        "Bevor du anfängst, prüfe:",
+    "This computer is on your home network, by cable or WLAN. The guest WLAN will not work.":
+        "Dieser Computer ist per Kabel oder WLAN im Heimnetz. Das Gast-WLAN funktioniert nicht.",
+    "Any VPN is turned off for now.": "Ein VPN ist vorerst ausgeschaltet.",
+    "You know the password for the FRITZ!Box web interface. It is often printed on a sticker on the bottom of the box.":
+        "Du kennst das Passwort der FRITZ!Box-Benutzeroberfläche. Es steht oft auf einem Aufkleber unten auf der Box.",
+    "Your headset is plugged in.": "Dein Headset ist angeschlossen.",
+    "Check your phone number": "Rufnummer prüfen",
+    "Your FRITZ!Box needs at least one phone number from your internet provider.":
+        "Deine FRITZ!Box braucht mindestens eine Rufnummer von deinem Internetanbieter.",
+    "Click <b>Open FRITZ!Box</b> below and log in.": "Unten auf <b>FRITZ!Box öffnen</b> klicken und anmelden.",
+    "Go to <b>Telephony → Own Numbers</b>.": "<b>Telefonie → Eigene Rufnummern</b> öffnen.",
+    "Check that at least one number has a green dot.": "Prüfen, dass mindestens eine Rufnummer einen grünen Punkt hat.",
+    "If the list is empty, your provider has not set up telephony yet. Most providers do this "
+    "automatically. If yours does not, use the FRITZ!Box wizard for adding a phone number, with the "
+    "details your provider sent you.":
+        "Ist die Liste leer, hat dein Anbieter die Telefonie noch nicht eingerichtet. Die meisten Anbieter "
+        "erledigen das automatisch. Falls nicht, nutze den Assistenten der FRITZ!Box zum Einrichten einer "
+        "Rufnummer, mit den Daten aus den Unterlagen deines Anbieters.",
+    "Create an IP phone": "IP-Telefon anlegen",
+    "voice2fritz connects to the FRITZ!Box as an IP phone. Create one for it.":
+        "voice2fritz meldet sich als IP-Telefon an der FRITZ!Box an. Lege dafür eines an.",
+    "In the FRITZ!Box, go to <b>Telephony → Telephony Devices</b>.":
+        "In der FRITZ!Box <b>Telefonie → Telefoniegeräte</b> öffnen.",
+    "Click <b>Configure New Device</b>.": "<b>Neues Gerät einrichten</b> klicken.",
+    "Choose <b>Telephone (with and without answering machine)</b> and click <b>Next</b>.":
+        "<b>Telefon (mit und ohne Anrufbeantworter)</b> wählen und <b>Weiter</b> klicken.",
+    "Choose <b>LAN/WLAN (IP telephone)</b> and click <b>Next</b>.":
+        "<b>LAN/WLAN (IP-Telefon)</b> wählen und <b>Weiter</b> klicken.",
+    "Enter a name, for example <b>voice2fritz</b>.": "Einen Namen eingeben, zum Beispiel <b>voice2fritz</b>.",
+    "Choose a <b>username</b> and a <b>password</b>, and write both down.":
+        "<b>Benutzername</b> und <b>Kennwort</b> festlegen und beides aufschreiben.",
+    "Choose the <b>outgoing number</b> that people see when you call them.":
+        "Die <b>ausgehende Rufnummer</b> wählen, die Angerufene sehen.",
+    "Choose which <b>incoming calls</b> should ring in voice2fritz.":
+        "Wählen, bei welchen <b>ankommenden Anrufen</b> voice2fritz klingeln soll.",
+    "Finish the wizard. You may need to confirm with a button press on the box or on a DECT handset.":
+        "Den Assistenten abschließen. Eventuell musst du per Tastendruck an der Box oder an einem "
+        "DECT-Mobilteil bestätigen.",
+    "The username and password are new credentials only for voice2fritz. "
+    "They are not your FRITZ!Box login.":
+        "Benutzername und Kennwort sind neue Zugangsdaten nur für voice2fritz. "
+        "Sie sind nicht die Anmeldung an der FRITZ!Box.",
+    "Audio": "Ton",
+    "Choose your headset, then test it.": "Wähle dein Headset und teste es.",
+    "Done": "Fertig",
+    "voice2fritz is connected. Make a few test calls:": "voice2fritz ist verbunden. Mach ein paar Testanrufe:",
+    "<b>Internal:</b> dial the internal number of a DECT handset, for example <b>**610</b>. This costs nothing.":
+        "<b>Intern:</b> die interne Rufnummer eines DECT-Mobilteils wählen, zum Beispiel <b>**610</b>. "
+        "Das kostet nichts.",
+    "<b>External:</b> call your mobile phone and check that both sides hear each other.":
+        "<b>Extern:</b> dein Handy anrufen und prüfen, ob beide Seiten sich hören.",
+    "<b>Incoming:</b> call your landline from your mobile phone.":
+        "<b>Eingehend:</b> vom Handy aus deine Festnetznummer anrufen.",
+    'If something does not work, see the <a href="{url}">troubleshooting section of the setup guide</a>.':
+        'Falls etwas nicht funktioniert, hilft die <a href="{url}">Fehlersuche in der Einrichtungsanleitung</a>.',
 }
 
 _language = DEFAULT_LANGUAGE
