@@ -385,3 +385,17 @@ def test_ip_phone_steps_say_to_click_next_after_the_credentials(wizard):
     steps = ip_phone_page.findChildren(QLabel)[0].text()
 
     assert "write both down, then click <b>Next</b>." in steps
+
+
+def test_outgoing_number_step_names_the_page_and_says_to_click_next(wizard):
+    from PySide6.QtWidgets import QLabel
+
+    try:
+        set_language("de")
+        wizard = SetupWizard(wizard.connect_page.sip_engine)
+        steps = wizard.page(wizard.pageIds()[2]).findChildren(QLabel)[0].text()
+    finally:
+        set_language("en")
+
+    assert "<b>Telefon für ausgehende Gespräche einrichten</b>" in steps
+    assert "<b>Weiter</b> klicken.</li><li>Wählen, bei welchen" in steps

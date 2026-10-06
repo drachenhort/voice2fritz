@@ -184,8 +184,10 @@ _GERMAN = {
     "Enter a name, for example <b>voice2fritz</b>.": "Einen Namen eingeben, zum Beispiel <b>voice2fritz</b>.",
     "Choose a <b>username</b> and a <b>password</b>, write both down, then click <b>Next</b>.":
         "<b>Benutzername</b> und <b>Kennwort</b> festlegen, beides aufschreiben und dann <b>Weiter</b> klicken.",
-    "Choose the <b>outgoing number</b> that people see when you call them.":
-        "Die <b>ausgehende Rufnummer</b> wählen, die Angerufene sehen.",
+    "On the page for outgoing calls, choose the <b>number</b> that people see when you call them, "
+    "then click <b>Next</b>.":
+        "Auf der Seite <b>Telefon für ausgehende Gespräche einrichten</b> die Rufnummer wählen, "
+        "die Angerufene sehen, und <b>Weiter</b> klicken.",
     "Choose which <b>incoming calls</b> should ring in voice2fritz.":
         "Wählen, bei welchen <b>ankommenden Anrufen</b> voice2fritz klingeln soll.",
     "Finish the wizard. You may need to confirm with a button press on the box or on a DECT handset.":

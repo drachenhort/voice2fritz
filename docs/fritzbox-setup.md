@@ -52,8 +52,8 @@ specific to voice2fritz.
    - Use whatever username the box suggests or allows.
    - Use a strong password with at least 8 characters. Write down both.
    - Click **Next**.
-7. **Outgoing number:** choose the number that people should see when you
-   call them.
+7. **Outgoing number:** on the next page (for outgoing calls), choose the
+   number that people should see when you call them, then click **Next**.
 8. **Incoming calls:** choose which numbers should ring in voice2fritz
    (all numbers or a selection).
 9. Finish the wizard. You may need to confirm with a button press on the

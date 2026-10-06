@@ -55,8 +55,9 @@ Anbieterdaten, und das hat mit voice2fritz nichts zu tun.
    - Ein starkes Kennwort mit mindestens 8 Zeichen wählen. Beides
      aufschreiben.
    - **Weiter** klicken.
-7. **Ausgehende Rufnummer:** die Nummer wählen, die Angerufene sehen
-   sollen.
+7. **Ausgehende Rufnummer:** auf der Seite **Telefon für ausgehende
+   Gespräche einrichten** die Nummer wählen, die Angerufene sehen sollen,
+   und **Weiter** klicken.
 8. **Ankommende Anrufe:** wählen, auf welche Rufnummern voice2fritz
    klingeln soll (alle oder eine Auswahl).
 9. Den Assistenten abschließen. Eventuell musst du die Einrichtung per
