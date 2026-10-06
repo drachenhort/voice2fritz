@@ -35,7 +35,10 @@ disabled during a call (with the tooltip "Not available during a call"),
 in `SettingsPanel.set_call_active`, like the echo test button.
 
 `MainWindow` connects the signal to `open_setup_wizard()`, which creates
-a `SetupWizard` and opens it as a modal window.
+a `SetupWizard` and shows it as a separate, non-modal window. Non-modal so
+that a call arriving while the wizard is open can still be hung up in the
+main window. Pressing the button while the wizard is already open raises
+the existing wizard instead of opening a second one.
 
 ## Wizard Pages
 
@@ -150,7 +153,8 @@ owns a single-shot `QTimer` with `REGISTRATION_TIMEOUT_MS`.
 
 - `open_setup_wizard()` creates `SetupWizard(self.sip_engine, self)`,
   keeps it in `self._setup_wizard`, connects `finished` to
-  `_on_setup_wizard_finished`, and calls `open()`.
+  `_on_setup_wizard_finished`, and calls `show()`. If a wizard is already
+  open, it calls `raise_()` and `activateWindow()` on it instead.
 - While `self._setup_wizard` is not `None`, `_show_registration_error`
   returns without showing a popup (this covers `_on_registration_failed`
   and any verification still running). Wizard registrations never start
@@ -160,13 +164,17 @@ owns a single-shot `QTimer` with `REGISTRATION_TIMEOUT_MS`.
 - `_set_call_button_active` (which already calls
   `settings_panel.set_call_active`) also calls
   `self._setup_wizard.set_call_active` when the wizard is open.
-- `_on_setup_wizard_finished` sets `self._setup_wizard = None` and calls
-  `settings_panel.reload()`.
+- `_on_setup_wizard_finished` calls `deleteLater()` on the wizard, sets
+  `self._setup_wizard = None` and calls `settings_panel.reload()`.
 
 ### `SettingsPanel.reload()` (new)
 
 Reloads host and username from `config.load_config()`, updates the
-password hint, and restores the saved device choices into the combos.
+password hint, shows the saved device choices in the combos
+(`AudioSetupWidget.show_saved_devices()`), and restarts the mic level
+monitor if Settings is visible (`AudioSetupWidget.resume_level_monitor()`).
+The restart is needed because the wizard's audio page stops the shared
+level monitor when it hides, even though Settings is still on screen.
 
 ## Translations
 
@@ -183,7 +191,11 @@ Tests run offscreen with a fake `sip_engine` and the stubbed keyring from
 `conftest.py`.
 
 - **Extraction safety:** the existing Settings panel and Settings dialog
-  tests pass unchanged.
+  tests keep passing. The only edits allowed are retargeting: patches of
+  `settings_panel` module internals that moved (`wav_is_finalized`,
+  `wav_peak`, `_ECHO_FINALIZE_MAX_POLLS`) now patch `audio_setup_widget`,
+  and calls to moved private methods (`_advance_echo_test`,
+  `_update_mic_level`) go through `panel.audio`.
 - `classify_registration`: table test (`"200 OK"` → `"ok"`; 401, 403,
   407 → `"rejected"`; 408, 503 → `None`).
 - `config.save_account`: writes config, sets the password only when
